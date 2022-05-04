@@ -1,6 +1,8 @@
 package main
 
 import (
+	"NeraJima/configs"
+	"NeraJima/routes"
 	"log"
 	"os"
 
@@ -8,16 +10,10 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/helmet/v2"
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	if os.Getenv("APP_ENV") != "production" {
-		err := godotenv.Load()
-		if err != nil {
-			log.Fatal("Error loading .env file")
-		}
-	}
+	configs.EnvValidator()
 
 	app := fiber.New()
 
@@ -26,9 +22,8 @@ func main() {
 	app.Use(cors.New())
 	app.Use(logger.New())
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello World 👋! Its me, PSJ")
-	})
+	configs.ConnectDatabase()
+	routes.SetupRouter(app)
 
 	port := os.Getenv("PORT")
 	err := app.Listen(":" + port)
