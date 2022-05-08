@@ -8,3 +8,8 @@
 1. Configured the database connection.
 2. Configured env variables.
 3. Configured a root router.
+
+## Third Commit
+
+1. Created a User model.
+2. Created nested api endpoints

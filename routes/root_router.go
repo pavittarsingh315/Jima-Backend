@@ -7,11 +7,13 @@ import (
 )
 
 func SetupRouter(app *fiber.App) {
-	app.Get("/default", func(c *fiber.Ctx) error {
+	api := app.Group("/api")
+
+	api.Get("/default", func(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).SendString("🚀🚀🚀🚀 - PSJ 05-03-22 8:29 pm")
 	})
 
-	// api := app.Group("/api")
+	AuthRouter(api)
 
 	app.Use(func(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(
