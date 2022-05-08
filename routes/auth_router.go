@@ -1,13 +1,13 @@
 package routes
 
 import (
+	"NeraJima/controllers/auth"
+
 	"github.com/gofiber/fiber/v2"
 )
 
 func AuthRouter(group fiber.Router) {
 	router := group.Group("/auth")
 
-	router.Get("/register", func(c *fiber.Ctx) error {
-		return c.Status(fiber.StatusOK).SendString("Register route!!!")
-	})
+	router.Get("/register", auth.Register)
 }
