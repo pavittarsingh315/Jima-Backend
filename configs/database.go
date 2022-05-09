@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var DBClient *mongo.Client
+var dbClient *mongo.Client
 
 func ConnectDatabase() {
 	client, err := mongo.NewClient(options.Client().ApplyURI(EnvMongoUri()))
@@ -32,11 +32,11 @@ func ConnectDatabase() {
 		log.Fatal(err)
 	}
 
-	DBClient = client
+	dbClient = client
 	fmt.Println("Database connection established...")
 }
 
 func GetCollection(databaseName, collectionName string) *mongo.Collection {
-	collection := DBClient.Database(databaseName).Collection(collectionName)
+	collection := dbClient.Database(databaseName).Collection(collectionName)
 	return collection
 }

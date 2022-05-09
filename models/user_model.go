@@ -11,13 +11,13 @@ import (
 
 type User struct {
 	Id          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Name        string             `json:"name,omitempty"`
-	Username    string             `json:"username,omitempty"`
-	Password    string             `json:"password,omitempty"`
-	Contact     string             `json:"contact,omitempty"`
-	Strikes     int                `json:"strikes,omitempty"`
-	CreatedDate time.Time          `json:"createdDate,omitempty"`
-	LastUpdate  time.Time          `json:"lastUpdate,omitempty"`
-	LastLogin   time.Time          `json:"lastLogin,omitempty"`
-	BanTill     time.Time          `json:"banTill,omitempty"`
+	Name        string             `json:"name,omitempty" bson:"name,omitempty"`
+	Username    string             `json:"username,omitempty" bson:"username,omitempty"`
+	Password    string             `json:"password,omitempty" bson:"password,omitempty"`
+	Contact     string             `json:"contact,omitempty" bson:"contact,omitempty"`
+	Strikes     int                `json:"strikes,omitempty" bson:"strikes,omitempty"`
+	CreatedDate time.Time          `json:"createdDate,omitempty" bson:"createdDate,omitempty"`
+	LastUpdate  time.Time          `json:"lastUpdate,omitempty" bson:"lastUpdate,omitempty"`
+	LastLogin   time.Time          `json:"lastLogin,omitempty" bson:"lastLogin,omitempty"`
+	BanTill     time.Time          `json:"banTill,omitempty" bson:"banTill,omitempty"`
 }

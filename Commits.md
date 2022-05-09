@@ -20,3 +20,9 @@
 2. Created a temp object model.
 3. Created a TTL index in database to delete temp objects after 300 seconds.
 4. To create TTL index: go to db atlas, go to index tab of collection you want the index in, click create index, in options type {expireAfterSeconds: <time in seconds>} and in fields type { "fieldName": "1" }
+
+## Fifth Commit
+
+1. Created a request struct for the initial registration route.
+2. Made it so we use omitempty in every model's bson tag so that if a field(s) is empty, our db won't change the field(s) to empty/null.
+3. Began work on the initiate registration route.
