@@ -26,3 +26,9 @@
 1. Created a request struct for the initial registration route.
 2. Made it so we use omitempty in every model's bson tag so that if a field(s) is empty, our db won't change the field(s) to empty/null.
 3. Began work on the initiate registration route.
+
+## Sixth Commit
+
+1. Refactored the function that connects to the database.
+2. Created a success response and a validate email helper function.
+3. Complete implemented the initiate registration route.
