@@ -14,7 +14,7 @@ var accountID, authToken, fromNumber = configs.EnvTwilioIDKeyFrom()
 var twilioClient = twilio.NewRestClientWithParams(twilio.ClientParams{AccountSid: accountID, Password: authToken})
 
 func SendRegistrationText(code int, number string) {
-	message := fmt.Sprintln("Here is your NeraJima verification code:", code, "Code expires in 5 minutes!")
+	message := fmt.Sprintf("Here is your NeraJima verification code: %d. Code expires in 5 minutes!", code)
 
 	params := &openapi.CreateMessageParams{}
 	params.SetTo(number)

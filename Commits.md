@@ -41,3 +41,10 @@
 ## Eight Commit
 
 1. Integrated Twilio and created a SendRegistrationText function.
+
+## Ninth Commit -IMPORTANT
+
+1. Created a js function to generate 256 bit cryptographic strings to be used as auth token secrets.
+2. Installed jwt and created a function to create an access and refresh token given a user id.
+3. Created a function to generate the 6 digit user verification codes rather than using rand.
+4. Integrated most, but not all, of the finalize registration function.

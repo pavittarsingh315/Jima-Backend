@@ -35,3 +35,10 @@ func EnvTwilioIDKeyFrom() (id, token, from string) {
 	from = os.Getenv("TWILIO_FROM_NUMBER")
 	return
 }
+
+func EnvTokenSecrets() (access, refresh string) {
+	EnvValidator()
+	access = os.Getenv("ACCESS_TOKEN_SECRET")
+	refresh = os.Getenv("REFRESH_TOKEN_SECRET")
+	return
+}

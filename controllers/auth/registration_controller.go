@@ -7,7 +7,6 @@ import (
 	"NeraJima/responses"
 	"NeraJima/utils"
 	"context"
-	"math/rand"
 	"strings"
 	"time"
 
@@ -16,7 +15,7 @@ import (
 )
 
 func InitiateRegistration(c *fiber.Ctx) error {
-	var body requests.InitiateRegistrationRequest
+	var body requests.RegistrationRequest
 	var user models.User
 	var tempObj models.TemporaryObject
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -24,7 +23,7 @@ func InitiateRegistration(c *fiber.Ctx) error {
 
 	parserErr := c.BodyParser(&body)
 	if parserErr != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": parserErr.Error()}})
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
 
 	if body.Name == "" || body.Username == "" || body.Password == "" || body.Contact == "" {
@@ -71,8 +70,7 @@ func InitiateRegistration(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": errorMsg}})
 	}
 
-	rand.Seed(time.Now().UnixNano())
-	code := rand.Intn(1000000)
+	code := utils.EncodeToInt(6)
 	newTempObj := models.TemporaryObject{
 		VerificationCode: code,
 		Contact:          body.Contact,
@@ -90,4 +88,40 @@ func InitiateRegistration(c *fiber.Ctx) error {
 		utils.SendRegistrationText(code, body.Contact)
 		return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "A text has been sent with a verification code."}})
 	}
+}
+
+func FinalizeRegistration(c *fiber.Ctx) error {
+	var body requests.RegistrationRequest
+	var tempObj models.TemporaryObject
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	parserErr := c.BodyParser(&body)
+	if parserErr != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	}
+
+	if body.Code == 0 || body.Name == "" || body.Username == "" || body.Password == "" || body.Contact == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Please include all fields."}})
+	}
+
+	body.Contact = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(body.Contact), " ", ""))   // remove all whitespace and make lowercase
+	body.Username = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(body.Username), " ", "")) // remove all whitespace and make lowercase
+
+	tempObjError := configs.TempObjCollection.FindOne(ctx, bson.M{"contact": body.Contact}).Decode(&tempObj)
+	if tempObjError != nil { // error => no tempObj was found
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Code has expired. Please restart the registration process."}})
+	}
+
+	if tempObj.VerificationCode != body.Code {
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Incorrect Code."}})
+	}
+
+	// create user
+	// create profile
+	// delete tempObj
+
+	access, refresh := utils.GenAuthTokens("pretend this is an id")
+
+	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"access": access, "refresh": refresh}})
 }
