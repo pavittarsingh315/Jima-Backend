@@ -32,3 +32,8 @@
 1. Refactored the function that connects to the database.
 2. Created a success response and a validate email helper function.
 3. Complete implemented the initiate registration route.
+
+## Seventh Commit
+
+1. Installed SendGrid.
+2. Created a function to send a registration email.

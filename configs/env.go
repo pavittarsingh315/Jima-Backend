@@ -20,3 +20,8 @@ func EnvMongoUri() string {
 	EnvValidator()
 	return os.Getenv("MONGO_URI")
 }
+
+func SendGridKeyAndFrom() (string, string) {
+	EnvValidator()
+	return os.Getenv("SENDGRID_API_KEY"), os.Getenv("SENDGRID_SENDER")
+}
