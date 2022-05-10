@@ -71,6 +71,7 @@ func InitiateRegistration(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": errorMsg}})
 	}
 
+	rand.Seed(time.Now().UnixNano())
 	code := rand.Intn(1000000)
 	newTempObj := models.TemporaryObject{
 		VerificationCode: code,
@@ -86,7 +87,7 @@ func InitiateRegistration(c *fiber.Ctx) error {
 		utils.SendRegistrationEmail(body.Name, body.Contact, code)
 		return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "An email has been sent with a verification code."}})
 	} else {
-		// send text
+		utils.SendRegistrationText(code, body.Contact)
 		return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "A text has been sent with a verification code."}})
 	}
 }

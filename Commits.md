@@ -37,3 +37,7 @@
 
 1. Installed SendGrid.
 2. Created a function to send a registration email.
+
+## Eight Commit
+
+1. Integrated Twilio and created a SendRegistrationText function.

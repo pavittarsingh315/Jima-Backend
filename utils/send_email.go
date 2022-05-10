@@ -8,8 +8,8 @@ import (
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
-var apiKey, emailSender string = configs.SendGridKeyAndFrom()
-var client *sendgrid.Client = sendgrid.NewSendClient(apiKey)
+var apiKey, emailSender string = configs.EnvSendGridKeyAndFrom()
+var sendgridClient *sendgrid.Client = sendgrid.NewSendClient(apiKey)
 
 func SendRegistrationEmail(name, email string, code int) {
 	from := mail.NewEmail("NeraJima", emailSender)
@@ -28,7 +28,7 @@ func SendRegistrationEmail(name, email string, code int) {
 
 	m.AddPersonalizations(p)
 
-	res, err := client.Send(m)
+	res, err := sendgridClient.Send(m)
 	if err != nil {
 		fmt.Println(err)
 	} else {

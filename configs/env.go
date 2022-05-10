@@ -21,7 +21,17 @@ func EnvMongoUri() string {
 	return os.Getenv("MONGO_URI")
 }
 
-func SendGridKeyAndFrom() (string, string) {
+func EnvSendGridKeyAndFrom() (key, sender string) {
 	EnvValidator()
-	return os.Getenv("SENDGRID_API_KEY"), os.Getenv("SENDGRID_SENDER")
+	key = os.Getenv("SENDGRID_API_KEY")
+	sender = os.Getenv("SENDGRID_SENDER")
+	return
+}
+
+func EnvTwilioIDKeyFrom() (id, token, from string) {
+	EnvValidator()
+	id = os.Getenv("TWILIO_ACCOUNT_SID")
+	token = os.Getenv("TWILIO_AUTH_TOKEN")
+	from = os.Getenv("TWILIO_FROM_NUMBER")
+	return
 }
