@@ -12,6 +12,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func InitiateRegistration(c *fiber.Ctx) error {
@@ -117,11 +118,43 @@ func FinalizeRegistration(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Incorrect Code."}})
 	}
 
-	// create user
-	// create profile
-	// delete tempObj
+	newUser := models.User{
+		Id:          primitive.NewObjectID(),
+		Name:        body.Name,
+		Username:    body.Username,
+		Password:    utils.HashPassword(body.Password),
+		Contact:     body.Contact,
+		Strikes:     0,
+		CreatedDate: time.Now(),
+		LastLogin:   time.Now(),
+		LastUpdate:  time.Now(),
+		BanTill:     time.Now(),
+	}
+	_, userErr := configs.UserCollection.InsertOne(ctx, newUser)
+	if userErr != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	}
 
-	access, refresh := utils.GenAuthTokens("pretend this is an id")
+	// create profile here
 
-	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"access": access, "refresh": refresh}})
+	_, err := configs.TempObjCollection.DeleteOne(ctx, bson.M{"contact": body.Contact})
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	}
+
+	access, refresh := utils.GenAuthTokens(newUser.Id.Hex())
+
+	return c.Status(fiber.StatusOK).JSON(
+		responses.SuccessResponse{
+			Status:  fiber.StatusOK,
+			Message: "Success",
+			Data: &fiber.Map{
+				"data": &fiber.Map{
+					"access":  access,
+					"refresh": refresh,
+					"user":    newUser,
+				},
+			},
+		},
+	)
 }

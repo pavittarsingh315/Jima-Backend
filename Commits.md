@@ -48,3 +48,8 @@
 2. Installed jwt and created a function to create an access and refresh token given a user id.
 3. Created a function to generate the 6 digit user verification codes rather than using rand.
 4. Integrated most, but not all, of the finalize registration function.
+
+## Tenth Commit
+
+1. Completely integrated the finalize registration route.
+2. Installed bcrypt and created two functions: one to hash password and one to compare.
