@@ -24,7 +24,7 @@ func InitiateRegistration(c *fiber.Ctx) error {
 
 	parserErr := c.BodyParser(&body)
 	if parserErr != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Bad request..."}})
 	}
 
 	if body.Name == "" || body.Username == "" || body.Password == "" || body.Contact == "" {
@@ -99,7 +99,7 @@ func FinalizeRegistration(c *fiber.Ctx) error {
 
 	parserErr := c.BodyParser(&body)
 	if parserErr != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Bad request..."}})
 	}
 
 	if body.Code == 0 || body.Name == "" || body.Username == "" || body.Password == "" || body.Contact == "" {

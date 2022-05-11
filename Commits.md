@@ -53,3 +53,7 @@
 
 1. Completely integrated the finalize registration route.
 2. Installed bcrypt and created two functions: one to hash password and one to compare.
+
+## Eleventh Commit
+
+1. Implemented login and token login routes.

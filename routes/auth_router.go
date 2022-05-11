@@ -11,4 +11,6 @@ func AuthRouter(group fiber.Router) {
 
 	router.Post("/register/initial", auth.InitiateRegistration)
 	router.Post("/register/final", auth.FinalizeRegistration)
+	router.Post("/login", auth.Login)
+	router.Post("/login/token", auth.TokenLogin)
 }

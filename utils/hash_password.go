@@ -21,6 +21,7 @@ func VerifyPassword(hashPassword, plainPassword string) bool {
 	plainPasswordBytes := []byte(plainPassword)
 	hashPasswordBytes := []byte(hashPassword)
 
+	// error == nil if passwords match
 	err := bcrypt.CompareHashAndPassword(hashPasswordBytes, plainPasswordBytes)
 
 	if err == nil {
