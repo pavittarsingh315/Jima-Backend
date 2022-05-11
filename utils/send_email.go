@@ -2,7 +2,6 @@ package utils
 
 import (
 	"NeraJima/configs"
-	"fmt"
 
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
@@ -29,9 +28,27 @@ func SendRegistrationEmail(name, email string, code int) {
 	m.AddPersonalizations(p)
 
 	res, err := sendgridClient.Send(m)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(res.StatusCode)
+	_ = res
+	_ = err
+}
+
+func SendPasswordResetEmail(name, email string, code int) {
+	from := mail.NewEmail("NeraJima", emailSender)
+	tos := []*mail.Email{ // list of emails to send this email to
+		mail.NewEmail(name, email),
 	}
+
+	m := mail.NewV3Mail()
+	m.SetFrom(from)
+	m.SetTemplateID("d-7333e78a73e946638808809e4020df8b")
+
+	p := mail.NewPersonalization()
+	p.SetDynamicTemplateData("verification_code", code)
+	p.AddTos(tos...)
+
+	m.AddPersonalizations(p)
+
+	res, err := sendgridClient.Send(m)
+	_ = res
+	_ = err
 }

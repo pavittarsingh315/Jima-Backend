@@ -17,3 +17,9 @@ type TokenLoginRequest struct {
 	AccessToken  string `json:"access"`
 	RefreshToken string `json:"refresh"`
 }
+
+type RecoveryRequest struct {
+	Contact  string `json:"contact"`
+	Password string `json:"password"`
+	Code     int    `json:"code"`
+}

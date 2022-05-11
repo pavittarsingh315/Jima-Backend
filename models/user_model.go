@@ -6,8 +6,11 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// omitempty means if the field is empty, ignore it.
-// i.e, if a field is undefined, it will simply not show the field in the response
+/*
+Database Indices:
+    field {"contact": "1"}, option: {unique: true}
+    field {"username": "1"}, option: {unique: true}
+*/
 
 type User struct {
 	Id          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
@@ -21,3 +24,6 @@ type User struct {
 	LastLogin   time.Time          `json:"lastLogin,omitempty" bson:"lastLogin,omitempty"`
 	BanTill     time.Time          `json:"banTill,omitempty" bson:"banTill,omitempty"`
 }
+
+// omitempty means if the field is empty, ignore it.
+// i.e, if a field is undefined, it will simply not show the field in the response

@@ -57,3 +57,8 @@
 ## Eleventh Commit
 
 1. Implemented login and token login routes.
+
+## Twelveth Commit
+
+1. Implemented entire password reset process.
+2. Added functions to send reset email and text.
