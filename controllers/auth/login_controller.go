@@ -19,6 +19,7 @@ import (
 func Login(c *fiber.Ctx) error {
 	var body requests.LoginRequest
 	var user models.User
+	var profile models.Profile
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -49,7 +50,10 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": message}})
 	}
 
-	// get profile
+	profileErr := configs.ProfileCollection.FindOne(ctx, bson.M{"userId": user.Id}).Decode(&profile)
+	if profileErr != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Account not found."}})
+	}
 
 	update := bson.M{"lastLogin": time.Now()}
 	_, err := configs.UserCollection.UpdateOne(ctx, bson.M{"_id": user.Id}, bson.M{"$set": update})
@@ -67,7 +71,7 @@ func Login(c *fiber.Ctx) error {
 				"data": &fiber.Map{
 					"access":  access,
 					"refresh": refresh,
-					// return profile
+					"profile": profile,
 				},
 			},
 		},
@@ -77,6 +81,7 @@ func Login(c *fiber.Ctx) error {
 func TokenLogin(c *fiber.Ctx) error {
 	var body requests.TokenLoginRequest
 	var user models.User
+	var profile models.Profile
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -115,7 +120,10 @@ func TokenLogin(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": message}})
 	}
 
-	// get profile
+	profileErr := configs.ProfileCollection.FindOne(ctx, bson.M{"userId": user.Id}).Decode(&profile)
+	if profileErr != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Account not found."}})
+	}
 
 	update := bson.M{"lastLogin": time.Now()}
 	_, err := configs.UserCollection.UpdateOne(ctx, bson.M{"_id": userId}, bson.M{"$set": update})
@@ -131,7 +139,7 @@ func TokenLogin(c *fiber.Ctx) error {
 				"data": &fiber.Map{
 					"access":  body.AccessToken,
 					"refresh": body.RefreshToken,
-					// return profile
+					"profile": profile,
 				},
 			},
 		},

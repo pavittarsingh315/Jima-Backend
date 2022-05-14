@@ -62,3 +62,9 @@
 
 1. Implemented entire password reset process.
 2. Added functions to send reset email and text.
+
+## Thirteenth Commit
+
+1. Created a profile model.
+2. Created logic to create profile when user registers.
+3. Made it so a user's profile is returned when they login.

@@ -132,7 +132,7 @@ func ConfirmPasswordReset(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "This is your old password...💀"}})
 	}
 
-	update := bson.M{"password": utils.HashPassword(body.Password)}
+	update := bson.M{"password": utils.HashPassword(body.Password), "lastUpdate": time.Now()}
 	_, err := configs.UserCollection.UpdateOne(ctx, bson.M{"_id": user.Id}, bson.M{"$set": update})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error...."}})

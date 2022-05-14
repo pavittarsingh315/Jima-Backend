@@ -135,7 +135,26 @@ func FinalizeRegistration(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
 
-	// create profile here
+	newProfile := models.Profile{
+		Id:                 primitive.NewObjectID(),
+		UserId:             newUser.Id,
+		Username:           body.Username,
+		Name:               body.Name,
+		Bio:                "🚀🚀🚀🚀🚀🚀🚀🚀",
+		BlacklistMessage:   "You do not have permission to view these posts!",
+		ProfilePicture:     "https://nerajima.s3.us-west-1.amazonaws.com/default.png",
+		MiniProfilePicture: "https://nerajima.s3.us-west-1.amazonaws.com/default.png",
+		NumFollowers:       0,
+		NumFollowing:       0,
+		NumWhitelisted:     0,
+		CreatedDate:        time.Now(),
+		UpdatedDate:        time.Now(),
+	}
+
+	_, profileErr := configs.ProfileCollection.InsertOne(ctx, newProfile)
+	if profileErr != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	}
 
 	_, err := configs.TempObjCollection.DeleteOne(ctx, bson.M{"contact": body.Contact})
 	if err != nil {
@@ -152,7 +171,7 @@ func FinalizeRegistration(c *fiber.Ctx) error {
 				"data": &fiber.Map{
 					"access":  access,
 					"refresh": refresh,
-					"user":    newUser,
+					"profile": newProfile,
 				},
 			},
 		},
