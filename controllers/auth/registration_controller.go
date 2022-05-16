@@ -7,6 +7,7 @@ import (
 	"NeraJima/responses"
 	"NeraJima/utils"
 	"context"
+	"strconv"
 	"strings"
 	"time"
 
@@ -34,12 +35,6 @@ func InitiateRegistration(c *fiber.Ctx) error {
 	body.Contact = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(body.Contact), " ", ""))   // remove all whitespace and make lowercase
 	body.Username = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(body.Username), " ", "")) // remove all whitespace and make lowercase
 
-	// likelyhood of username being taken is high so we check it first to avoid unnecessary queries/computations
-	usernameErr := configs.UserCollection.FindOne(ctx, bson.M{"username": body.Username}).Decode(&user)
-	if usernameErr == nil { // no error => user with username exists
-		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Username taken."}})
-	}
-
 	if len(body.Username) < 6 {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Username too short."}})
 	}
@@ -56,9 +51,9 @@ func InitiateRegistration(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Password too short."}})
 	}
 
-	tempObjError := configs.TempObjCollection.FindOne(ctx, bson.M{"contact": body.Contact}).Decode(&tempObj)
-	if tempObjError == nil { // no error => tempObj with contact exists
-		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Try again in a few minutes."}})
+	usernameErr := configs.UserCollection.FindOne(ctx, bson.M{"username": body.Username}).Decode(&user)
+	if usernameErr == nil { // no error => user with username exists
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Username taken."}})
 	}
 
 	contactIsEmail := utils.ValidateEmail(body.Contact)
@@ -69,6 +64,11 @@ func InitiateRegistration(c *fiber.Ctx) error {
 			errorMsg = "Email address already in use."
 		}
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": errorMsg}})
+	}
+
+	tempObjError := configs.TempObjCollection.FindOne(ctx, bson.M{"contact": body.Contact}).Decode(&tempObj)
+	if tempObjError == nil { // no error => tempObj with contact exists
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Try again in a few minutes."}})
 	}
 
 	code := utils.EncodeToInt(6)
@@ -102,7 +102,7 @@ func FinalizeRegistration(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Bad request..."}})
 	}
 
-	if body.Code == 0 || body.Name == "" || body.Username == "" || body.Password == "" || body.Contact == "" {
+	if body.Code == "" || body.Name == "" || body.Username == "" || body.Password == "" || body.Contact == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Please include all fields."}})
 	}
 
@@ -114,7 +114,8 @@ func FinalizeRegistration(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Code has expired. Please restart the registration process."}})
 	}
 
-	if tempObj.VerificationCode != body.Code {
+	code, _ := strconv.Atoi(body.Code)
+	if tempObj.VerificationCode != code {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Incorrect Code."}})
 	}
 

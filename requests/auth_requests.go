@@ -5,7 +5,7 @@ type RegistrationRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Contact  string `json:"contact"`
-	Code     int    `json:"code"`
+	Code     string `json:"code"`
 }
 
 type LoginRequest struct {
@@ -21,5 +21,5 @@ type TokenLoginRequest struct {
 type RecoveryRequest struct {
 	Contact  string `json:"contact"`
 	Password string `json:"password"`
-	Code     int    `json:"code"`
+	Code     string `json:"code"`
 }

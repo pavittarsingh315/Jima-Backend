@@ -68,3 +68,9 @@
 1. Created a profile model.
 2. Created logic to create profile when user registers.
 3. Made it so a user's profile is returned when they login.
+
+## Fourteenth Commit
+
+1. Changed error messages in login to add a bit more security.
+2. Swapped around the position of some logic in intial registration route.
+3. Made the Code request body field a string which is converted to an int to avoid logic flaw if the code provided is actually 0 and not just empty.

@@ -7,6 +7,7 @@ import (
 	"NeraJima/responses"
 	"NeraJima/utils"
 	"context"
+	"strconv"
 	"strings"
 	"time"
 
@@ -74,7 +75,7 @@ func ConfirmResetCode(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Bad request..."}})
 	}
 
-	if body.Code == 0 || body.Contact == "" {
+	if body.Code == "" || body.Contact == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Please include all fields."}})
 	}
 
@@ -85,7 +86,8 @@ func ConfirmResetCode(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Code has expired. Please restart the reset process."}})
 	}
 
-	if tempObj.VerificationCode != body.Code {
+	code, _ := strconv.Atoi(body.Code)
+	if tempObj.VerificationCode != code {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Incorrect Code."}})
 	}
 
@@ -104,7 +106,7 @@ func ConfirmPasswordReset(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Bad request..."}})
 	}
 
-	if body.Code == 0 || body.Contact == "" || body.Password == "" {
+	if body.Code == "" || body.Contact == "" || body.Password == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Please include all fields."}})
 	}
 
@@ -119,7 +121,8 @@ func ConfirmPasswordReset(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Reset time has expired. Please restart the reset process."}})
 	}
 
-	if tempObj.VerificationCode != body.Code {
+	code, _ := strconv.Atoi(body.Code)
+	if tempObj.VerificationCode != code {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Incorrect Code."}})
 	}
 
@@ -132,7 +135,7 @@ func ConfirmPasswordReset(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "This is your old password...💀"}})
 	}
 
-	update := bson.M{"password": utils.HashPassword(body.Password), "lastUpdate": time.Now()}
+	update := bson.M{"password": utils.HashPassword(body.Password)}
 	_, err := configs.UserCollection.UpdateOne(ctx, bson.M{"_id": user.Id}, bson.M{"$set": update})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error...."}})

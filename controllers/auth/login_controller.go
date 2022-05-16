@@ -40,7 +40,7 @@ func Login(c *fiber.Ctx) error {
 	}
 
 	if !utils.VerifyPassword(user.Password, body.Password) { // password doesn't match
-		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Incorrect password."}})
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Account not found."}})
 	}
 
 	unixTimeNow := time.Now().Unix()
@@ -100,8 +100,8 @@ func TokenLogin(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Authentication error..."}})
 	}
 
-	if accessBody.UserId != refreshBody.UserId {
-		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Pair mismatch error..."}})
+	if accessBody.UserId != refreshBody.UserId { // token pair are a mismatch
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Authentication error..."}})
 	}
 
 	body.AccessToken = accessToken
