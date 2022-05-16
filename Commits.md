@@ -79,3 +79,7 @@
 
 1. Started Heroku integration.
 2. To connect project to existing app: heroku login, heroku git:remote -a appname
+
+## Heroku
+
+1. Everything works
