@@ -74,3 +74,8 @@
 1. Changed error messages in login to add a bit more security.
 2. Swapped around the position of some logic in intial registration route.
 3. Made the Code request body field a string which is converted to an int to avoid logic flaw if the code provided is actually 0 and not just empty.
+
+## Fifteenth Commit -IMPORTANT
+
+1. Started Heroku integration.
+2. To connect project to existing app: heroku login, heroku git:remote -a appname
