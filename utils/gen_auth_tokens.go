@@ -13,6 +13,7 @@ type claims struct {
 	jwt.RegisteredClaims
 }
 
+// Generates Access and Refresh tokens given a user id
 func GenAuthTokens(user_id string) (access, refresh string) {
 	accessSecret, refreshSecret := configs.EnvTokenSecrets()
 
@@ -48,9 +49,11 @@ func GenAuthTokens(user_id string) (access, refresh string) {
 	return accessSigned, refreshSigned
 }
 
+// Returns error if any error excluding expiration occurs
 func VerifyAccessToken(token string) (string, claims, error) {
 	accessSecret, _ := configs.EnvTokenSecrets()
 	var tokenBody claims
+	accessExpTime := time.Now().Add(time.Hour * (24 * 30)) // 30 days
 
 	_, err := jwt.ParseWithClaims(token, &tokenBody, func(t *jwt.Token) (interface{}, error) {
 		return []byte(accessSecret), nil
@@ -59,7 +62,6 @@ func VerifyAccessToken(token string) (string, claims, error) {
 	if err != nil {
 		v, _ := err.(*jwt.ValidationError)
 		if v.Errors == jwt.ValidationErrorExpired {
-			accessExpTime := time.Now().Add(time.Hour * (24 * 30)) // 30 days
 			tokenBody.IssuedAt = jwt.NewNumericDate(time.Now())
 			tokenBody.ExpiresAt = jwt.NewNumericDate(accessExpTime)
 			newAccessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, tokenBody)
@@ -70,16 +72,44 @@ func VerifyAccessToken(token string) (string, claims, error) {
 			return "", claims{}, err
 		}
 	} else {
-		return token, tokenBody, nil
+		// if token expires within 12 hours, gen a new token
+		timeInTwelveHours := time.Now().Add(time.Hour * 12).Unix()
+		if timeInTwelveHours-tokenBody.ExpiresAt.Unix() > 0 {
+			tokenBody.IssuedAt = jwt.NewNumericDate(time.Now())
+			tokenBody.ExpiresAt = jwt.NewNumericDate(accessExpTime)
+			newAccessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, tokenBody)
+			accessSigningKey := []byte(accessSecret)
+			newToken, _ := newAccessToken.SignedString(accessSigningKey)
+			return newToken, tokenBody, nil
+		} else {
+			return token, tokenBody, nil
+		}
 	}
 }
 
+// Parses a refresh token and returns error if there is any error during parsing
 func VerifyRefreshToken(token string) (string, claims, error) {
 	_, refreshSecret := configs.EnvTokenSecrets()
 	var tokenBody claims
 
 	_, err := jwt.ParseWithClaims(token, &tokenBody, func(t *jwt.Token) (interface{}, error) {
 		return []byte(refreshSecret), nil
+	})
+
+	if err != nil {
+		return "", claims{}, err
+	} else {
+		return token, tokenBody, nil
+	}
+}
+
+// Returns error if any error including expiration occurs
+func VerifyAccessTokenNoRefresh(token string) (string, claims, error) {
+	accessSecret, _ := configs.EnvTokenSecrets()
+	var tokenBody claims
+
+	_, err := jwt.ParseWithClaims(token, &tokenBody, func(t *jwt.Token) (interface{}, error) {
+		return []byte(accessSecret), nil
 	})
 
 	if err != nil {

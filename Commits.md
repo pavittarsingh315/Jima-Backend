@@ -83,3 +83,9 @@
 ## Heroku
 
 1. Everything works
+
+## Fifteenth Commit
+
+1. Created a UserRouter and added a place holder edit username route.
+2. Created an Auth middleware.
+3. Made it so if an access token is within 12 hours of expiration, a new token is generated.
