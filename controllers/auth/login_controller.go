@@ -58,7 +58,7 @@ func Login(c *fiber.Ctx) error {
 	update := bson.M{"lastLogin": time.Now()}
 	_, err := configs.UserCollection.UpdateOne(ctx, bson.M{"_id": user.Id}, bson.M{"$set": update})
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error...."}})
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
 
 	access, refresh := utils.GenAuthTokens(user.Id.Hex())
@@ -128,7 +128,7 @@ func TokenLogin(c *fiber.Ctx) error {
 	update := bson.M{"lastLogin": time.Now()}
 	_, err := configs.UserCollection.UpdateOne(ctx, bson.M{"_id": userId}, bson.M{"$set": update})
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error...."}})
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(

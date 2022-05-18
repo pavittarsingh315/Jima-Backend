@@ -89,3 +89,11 @@
 1. Created a UserRouter and added a place holder edit username route.
 2. Created an Auth middleware.
 3. Made it so if an access token is within 12 hours of expiration, a new token is generated.
+
+## Sixteenth Commit
+
+1. Created a helper function to generate new access tokens if they're close to or are expired.
+2. Made minor updates to the profile model.
+3. Removed user query from auth middleware as user is almost never used.
+4. Made it so the leading and trailing whitespace is removed from a user's name.
+5. Created edit username, name, bio, and blacklist message endpoints.

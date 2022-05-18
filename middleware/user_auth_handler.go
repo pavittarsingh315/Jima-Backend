@@ -20,7 +20,6 @@ type header struct {
 
 func UserAuthHandler(c *fiber.Ctx) error {
 	var reqHeader header
-	var user models.User
 	var profile models.Profile
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -42,17 +41,11 @@ func UserAuthHandler(c *fiber.Ctx) error {
 	}
 
 	userId, _ := primitive.ObjectIDFromHex(accessBody.UserId)
-	userErr := configs.UserCollection.FindOne(ctx, bson.M{"_id": userId}).Decode(&user)
-	if userErr != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": errMessage}})
-	}
-
-	profileErr := configs.ProfileCollection.FindOne(ctx, bson.M{"userId": user.Id}).Decode(&profile)
+	profileErr := configs.ProfileCollection.FindOne(ctx, bson.M{"userId": userId}).Decode(&profile)
 	if profileErr != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": errMessage}})
 	}
 
-	c.Locals("user", user)
 	c.Locals("profile", profile)
 
 	return c.Next()

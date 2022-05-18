@@ -13,7 +13,6 @@ type claims struct {
 	jwt.RegisteredClaims
 }
 
-// Generates Access and Refresh tokens given a user id
 func GenAuthTokens(user_id string) (access, refresh string) {
 	accessSecret, refreshSecret := configs.EnvTokenSecrets()
 
@@ -49,11 +48,9 @@ func GenAuthTokens(user_id string) (access, refresh string) {
 	return accessSigned, refreshSigned
 }
 
-// Returns error if any error excluding expiration occurs
 func VerifyAccessToken(token string) (string, claims, error) {
 	accessSecret, _ := configs.EnvTokenSecrets()
 	var tokenBody claims
-	accessExpTime := time.Now().Add(time.Hour * (24 * 30)) // 30 days
 
 	_, err := jwt.ParseWithClaims(token, &tokenBody, func(t *jwt.Token) (interface{}, error) {
 		return []byte(accessSecret), nil
@@ -61,33 +58,23 @@ func VerifyAccessToken(token string) (string, claims, error) {
 
 	if err != nil {
 		v, _ := err.(*jwt.ValidationError)
-		if v.Errors == jwt.ValidationErrorExpired {
-			tokenBody.IssuedAt = jwt.NewNumericDate(time.Now())
-			tokenBody.ExpiresAt = jwt.NewNumericDate(accessExpTime)
-			newAccessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, tokenBody)
-			accessSigningKey := []byte(accessSecret)
-			newToken, _ := newAccessToken.SignedString(accessSigningKey)
-			return newToken, tokenBody, nil
+		if v.Errors == jwt.ValidationErrorExpired { // if token is expired, gen new token
+			newToken, newTokenBody := genNewAccessToken(tokenBody, accessSecret)
+			return newToken, newTokenBody, nil
 		} else {
 			return "", claims{}, err
 		}
 	} else {
-		// if token expires within 12 hours, gen a new token
 		timeInTwelveHours := time.Now().Add(time.Hour * 12).Unix()
-		if timeInTwelveHours-tokenBody.ExpiresAt.Unix() > 0 {
-			tokenBody.IssuedAt = jwt.NewNumericDate(time.Now())
-			tokenBody.ExpiresAt = jwt.NewNumericDate(accessExpTime)
-			newAccessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, tokenBody)
-			accessSigningKey := []byte(accessSecret)
-			newToken, _ := newAccessToken.SignedString(accessSigningKey)
-			return newToken, tokenBody, nil
+		if timeInTwelveHours-tokenBody.ExpiresAt.Unix() > 0 { // if token will be expired within 12 hours, gen new token
+			newToken, newTokenBody := genNewAccessToken(tokenBody, accessSecret)
+			return newToken, newTokenBody, nil
 		} else {
 			return token, tokenBody, nil
 		}
 	}
 }
 
-// Parses a refresh token and returns error if there is any error during parsing
 func VerifyRefreshToken(token string) (string, claims, error) {
 	_, refreshSecret := configs.EnvTokenSecrets()
 	var tokenBody claims
@@ -103,7 +90,6 @@ func VerifyRefreshToken(token string) (string, claims, error) {
 	}
 }
 
-// Returns error if any error including expiration occurs
 func VerifyAccessTokenNoRefresh(token string) (string, claims, error) {
 	accessSecret, _ := configs.EnvTokenSecrets()
 	var tokenBody claims
@@ -117,4 +103,17 @@ func VerifyAccessTokenNoRefresh(token string) (string, claims, error) {
 	} else {
 		return token, tokenBody, nil
 	}
+}
+
+func genNewAccessToken(body claims, secret string) (string, claims) {
+	accessExpTime := time.Now().Add(time.Hour * (24 * 30)) // 30 days
+
+	body.IssuedAt = jwt.NewNumericDate(time.Now())
+	body.ExpiresAt = jwt.NewNumericDate(accessExpTime)
+
+	newAccessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, body)
+	accessSigningKey := []byte(secret)
+	newToken, _ := newAccessToken.SignedString(accessSigningKey)
+
+	return newToken, body
 }

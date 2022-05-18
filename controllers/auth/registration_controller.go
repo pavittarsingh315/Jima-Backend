@@ -32,6 +32,7 @@ func InitiateRegistration(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Please include all fields."}})
 	}
 
+	body.Name = strings.TrimSpace(body.Name)                                                       // remove leading and trailing whitespace
 	body.Contact = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(body.Contact), " ", ""))   // remove all whitespace and make lowercase
 	body.Username = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(body.Username), " ", "")) // remove all whitespace and make lowercase
 
@@ -106,6 +107,7 @@ func FinalizeRegistration(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Please include all fields."}})
 	}
 
+	body.Name = strings.TrimSpace(body.Name)                                                       // remove leading and trailing whitespace
 	body.Contact = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(body.Contact), " ", ""))   // remove all whitespace and make lowercase
 	body.Username = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(body.Username), " ", "")) // remove all whitespace and make lowercase
 
@@ -149,7 +151,7 @@ func FinalizeRegistration(c *fiber.Ctx) error {
 		NumFollowing:       0,
 		NumWhitelisted:     0,
 		CreatedDate:        time.Now(),
-		UpdatedDate:        time.Now(),
+		LastUpdate:         time.Now(),
 	}
 
 	_, profileErr := configs.ProfileCollection.InsertOne(ctx, newProfile)

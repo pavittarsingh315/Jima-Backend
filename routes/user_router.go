@@ -11,4 +11,7 @@ func UserRouter(group fiber.Router) {
 	router := group.Group("/user")
 
 	router.Put("/edit/username", middleware.UserAuthHandler, users.EditUsername)
+	router.Put("/edit/name", middleware.UserAuthHandler, users.EditName)
+	router.Put("/edit/bio", middleware.UserAuthHandler, users.EditBio)
+	router.Put("/edit/blacklistmessage", middleware.UserAuthHandler, users.EditBlacklistMessage)
 }
