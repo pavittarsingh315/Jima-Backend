@@ -133,11 +133,11 @@ func EditBlacklistMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Bad request..."}})
 	}
 
+	body.BlacklistMessage = strings.TrimSpace(body.BlacklistMessage) // remove leading and trailing whitespace
+
 	if body.BlacklistMessage == "" {
 		body.BlacklistMessage = "You do not have permission to view these posts!"
 	}
-
-	body.BlacklistMessage = strings.TrimSpace(body.BlacklistMessage) // remove leading and trailing whitespace
 
 	if body.BlacklistMessage == reqProfile.BlacklistMessage {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "This is your current blacklist message."}})
