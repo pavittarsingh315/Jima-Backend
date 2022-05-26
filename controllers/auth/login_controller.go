@@ -40,7 +40,7 @@ func Login(c *fiber.Ctx) error {
 	}
 
 	if !utils.VerifyPassword(user.Password, body.Password) { // password doesn't match
-		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Account not found."}})
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Incorrect Password."}})
 	}
 
 	unixTimeNow := time.Now().Unix()
