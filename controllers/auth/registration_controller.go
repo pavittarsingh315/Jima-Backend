@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/rivo/uniseg"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -36,19 +37,23 @@ func InitiateRegistration(c *fiber.Ctx) error {
 	body.Contact = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(body.Contact), " ", ""))   // remove all whitespace and make lowercase
 	body.Username = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(body.Username), " ", "")) // remove all whitespace and make lowercase
 
-	if len(body.Username) < 6 {
+	usernameLength := uniseg.GraphemeClusterCount(body.Username)
+	nameLength := uniseg.GraphemeClusterCount(body.Name)
+	contactLength := uniseg.GraphemeClusterCount(body.Contact)
+	passwordLength := uniseg.GraphemeClusterCount(body.Password)
+	if usernameLength < 6 {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Username too short."}})
 	}
-	if len(body.Username) > 30 {
+	if usernameLength > 30 {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Username too long."}})
 	}
-	if len(body.Name) > 30 {
+	if nameLength > 30 {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Name too long."}})
 	}
-	if len(body.Contact) > 50 {
+	if contactLength > 50 {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Contact too long."}})
 	}
-	if len(body.Password) < 10 {
+	if passwordLength < 10 {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Password too short."}})
 	}
 

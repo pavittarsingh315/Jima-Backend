@@ -10,9 +10,10 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.4.1
 	github.com/joho/godotenv v1.4.0
 	github.com/sendgrid/sendgrid-go v3.11.1+incompatible
-	go.mongodb.org/mongo-driver v1.9.1
 	github.com/twilio/twilio-go v0.25.0
+	go.mongodb.org/mongo-driver v1.9.1
 	golang.org/x/crypto v0.0.0-20220507011949-2cf3adece122
+	github.com/rivo/uniseg v0.2.0
 )
 
 require (

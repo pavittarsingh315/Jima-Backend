@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/rivo/uniseg"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -34,10 +35,12 @@ func EditUsername(c *fiber.Ctx) error {
 	if body.Username == reqProfile.Username {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "This is your current username."}})
 	}
-	if len(body.Username) < 6 {
+
+	usernameLength := uniseg.GraphemeClusterCount(body.Username)
+	if usernameLength < 6 {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Username too short."}})
 	}
-	if len(body.Username) > 30 {
+	if usernameLength > 30 {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Username too long."}})
 	}
 
@@ -77,7 +80,9 @@ func EditName(c *fiber.Ctx) error {
 	if body.Name == reqProfile.Name {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "This is your current name."}})
 	}
-	if len(body.Name) > 30 {
+
+	nameLength := uniseg.GraphemeClusterCount(body.Name)
+	if nameLength > 30 {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Name too long."}})
 	}
 
@@ -106,10 +111,12 @@ func EditBio(c *fiber.Ctx) error {
 	if body.Bio == reqProfile.Bio {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "This is your current bio."}})
 	}
+
+	bioLength := uniseg.GraphemeClusterCount(body.Bio)
 	if len(strings.Split(body.Bio, "\n")) > 6 { // bio has 6 lines max
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Line limit exceeded."}})
 	}
-	if len(body.Bio) > 151 {
+	if bioLength > 151 {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Bio too long."}})
 	}
 
@@ -142,10 +149,12 @@ func EditBlacklistMessage(c *fiber.Ctx) error {
 	if body.BlacklistMessage == reqProfile.BlacklistMessage {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "This is your current blacklist message."}})
 	}
+
+	blacklistMessageLength := uniseg.GraphemeClusterCount(body.BlacklistMessage)
 	if len(strings.Split(body.BlacklistMessage, "\n")) > 6 { // bio has 6 lines max
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Line limit exceeded."}})
 	}
-	if len(body.BlacklistMessage) > 151 {
+	if blacklistMessageLength > 151 {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Message too long."}})
 	}
 

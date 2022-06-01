@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/rivo/uniseg"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -110,7 +111,8 @@ func ConfirmPasswordReset(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Please include all fields."}})
 	}
 
-	if len(body.Password) < 10 {
+	passwordLength := uniseg.GraphemeClusterCount(body.Password)
+	if passwordLength < 10 {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Password too short."}})
 	}
 
