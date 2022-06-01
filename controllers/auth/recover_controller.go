@@ -14,6 +14,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/rivo/uniseg"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func RequestPasswordReset(c *fiber.Ctx) error {
@@ -46,6 +47,7 @@ func RequestPasswordReset(c *fiber.Ctx) error {
 
 	code := utils.EncodeToInt(6)
 	newTempObj := models.TemporaryObject{
+		Id:               primitive.NewObjectID(),
 		VerificationCode: code,
 		Contact:          body.Contact,
 		CreatedAt:        time.Now(),
@@ -98,6 +100,7 @@ func ConfirmResetCode(c *fiber.Ctx) error {
 func ConfirmPasswordReset(c *fiber.Ctx) error {
 	var body requests.RecoveryRequest
 	var user models.User
+	var profile models.Profile
 	var tempObj models.TemporaryObject
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -143,10 +146,29 @@ func ConfirmPasswordReset(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
 
+	profileErr := configs.ProfileCollection.FindOne(ctx, bson.M{"userId": user.Id}).Decode(&profile)
+	if profileErr != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Account not found."}})
+	}
+
 	_, tempObjDelError := configs.TempObjCollection.DeleteOne(ctx, bson.M{"contact": body.Contact})
 	if tempObjDelError != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "Password successfully updated."}})
+	access, refresh := utils.GenAuthTokens(user.Id.Hex())
+
+	return c.Status(fiber.StatusOK).JSON(
+		responses.SuccessResponse{
+			Status:  fiber.StatusOK,
+			Message: "Success",
+			Data: &fiber.Map{
+				"data": &fiber.Map{
+					"access":  access,
+					"refresh": refresh,
+					"profile": profile,
+				},
+			},
+		},
+	)
 }

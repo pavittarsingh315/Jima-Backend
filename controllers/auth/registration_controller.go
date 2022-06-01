@@ -79,6 +79,7 @@ func InitiateRegistration(c *fiber.Ctx) error {
 
 	code := utils.EncodeToInt(6)
 	newTempObj := models.TemporaryObject{
+		Id:               primitive.NewObjectID(),
 		VerificationCode: code,
 		Contact:          body.Contact,
 		CreatedAt:        time.Now(),
