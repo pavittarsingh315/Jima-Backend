@@ -7,6 +7,7 @@ import (
 	"NeraJima/responses"
 	"NeraJima/utils"
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -146,14 +147,21 @@ func ConfirmPasswordReset(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
 
-	profileErr := configs.ProfileCollection.FindOne(ctx, bson.M{"userId": user.Id}).Decode(&profile)
-	if profileErr != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Account not found."}})
-	}
-
 	_, tempObjDelError := configs.TempObjCollection.DeleteOne(ctx, bson.M{"contact": body.Contact})
 	if tempObjDelError != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	}
+
+	unixTimeNow := time.Now().Unix()
+	unixTimeBan := user.BanTill.Unix()
+	if unixTimeNow < unixTimeBan {
+		message := fmt.Sprintf("Password was succesfully updated but it seems you are banned for %s.", utils.SecondsToString(unixTimeBan-unixTimeNow))
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": message}})
+	}
+
+	profileErr := configs.ProfileCollection.FindOne(ctx, bson.M{"userId": user.Id}).Decode(&profile)
+	if profileErr != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Account not found."}})
 	}
 
 	access, refresh := utils.GenAuthTokens(user.Id.Hex())

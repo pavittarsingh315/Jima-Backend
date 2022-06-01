@@ -20,6 +20,7 @@ import (
 func InitiateRegistration(c *fiber.Ctx) error {
 	var body requests.RegistrationRequest
 	var user models.User
+	var profile models.Profile
 	var tempObj models.TemporaryObject
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -57,8 +58,8 @@ func InitiateRegistration(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Password too short."}})
 	}
 
-	usernameErr := configs.UserCollection.FindOne(ctx, bson.M{"username": body.Username}).Decode(&user)
-	if usernameErr == nil { // no error => user with username exists
+	usernameErr := configs.ProfileCollection.FindOne(ctx, bson.M{"username": body.Username}).Decode(&profile)
+	if usernameErr == nil { // no error => profile with username exists
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Username taken."}})
 	}
 
@@ -130,7 +131,6 @@ func FinalizeRegistration(c *fiber.Ctx) error {
 	newUser := models.User{
 		Id:          primitive.NewObjectID(),
 		Name:        body.Name,
-		Username:    body.Username,
 		Password:    utils.HashPassword(body.Password),
 		Contact:     body.Contact,
 		Strikes:     0,

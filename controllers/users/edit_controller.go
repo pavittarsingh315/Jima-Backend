@@ -16,7 +16,7 @@ import (
 
 func EditUsername(c *fiber.Ctx) error {
 	var body requests.EditProfileRequest
-	var user models.User
+	var profile models.Profile
 	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -44,18 +44,12 @@ func EditUsername(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Username too long."}})
 	}
 
-	usernameErr := configs.UserCollection.FindOne(ctx, bson.M{"username": body.Username}).Decode(&user)
+	usernameErr := configs.ProfileCollection.FindOne(ctx, bson.M{"username": body.Username}).Decode(&profile)
 	if usernameErr == nil { // no error => user with username exists
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Username taken."}})
 	}
 
 	update := bson.M{"username": body.Username, "lastUpdate": time.Now()}
-
-	_, updateUserErr := configs.UserCollection.UpdateOne(ctx, bson.M{"_id": reqProfile.UserId}, bson.M{"$set": update}) // use reqProfile.UserId bc user will be undefined
-	if updateUserErr != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
-	}
-
 	_, updateProfileErr := configs.ProfileCollection.UpdateOne(ctx, bson.M{"userId": reqProfile.UserId}, bson.M{"$set": update}) // use reqProfile.UserId bc user will be undefined
 	if updateProfileErr != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
