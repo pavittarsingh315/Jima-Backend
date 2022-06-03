@@ -160,3 +160,35 @@ func EditBlacklistMessage(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "Message updated."}})
 }
+
+func EditProfilePicture(c *fiber.Ctx) error {
+	var body requests.EditProfileRequest
+	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	parserErr := c.BodyParser(&body)
+	if parserErr != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Bad request..."}})
+	}
+
+	if body.NewProfilePicture == "" || body.OldProfilePicture == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Please include all fields."}})
+	}
+
+	if body.NewProfilePicture == reqProfile.ProfilePicture {
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "This is your current profile picture."}})
+	}
+
+	if body.OldProfilePicture != "https://nerajima.s3.us-west-1.amazonaws.com/default.jpg" {
+		configs.DeleteS3Object("")
+	}
+
+	update := bson.M{"profilePicture": body.NewProfilePicture, "miniProfilePicture": body.NewProfilePicture, "lastUpdate": time.Now()}
+	_, updateProfileErr := configs.ProfileCollection.UpdateOne(ctx, bson.M{"userId": reqProfile.UserId}, bson.M{"$set": update})
+	if updateProfileErr != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "Picture updated."}})
+}
