@@ -15,6 +15,7 @@ func SetupRouter(app *fiber.App) {
 
 	AuthRouter(api)
 	UserRouter(api)
+	UtilRouter(api)
 
 	app.Use(func(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(

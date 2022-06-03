@@ -1,29 +1,37 @@
 package configs
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 var (
-	region     = "us-west-1"
-	bucketName = "nerajima"
+	region               = "us-west-1"
+	bucketName           = "nerajima"
+	accessKey, secretKey = EnvAWSCredentials()
 )
 
 // "By default, the SDK detects AWS credentials set in your environment and uses them to sign requests to AWS. That way you don’t need to manage credentials in your applications."
 // All we need to do is have "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY" environment variables set in our environment and SDK will do the rest.
 // Read more here: https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials
 var s3Session = s3.New(session.Must(session.NewSession(&aws.Config{
-	Region: aws.String(region),
+	Region:      aws.String(region),
+	Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
 })))
 
 // Generate an upload url that'll put a file in an S3 bucket in a specific directory.
 func GenerateS3UploadUrl(directory string) (string, error) {
-	fileName := "my-file"
+	fileName, genErr := generateRandFileName(64)
+	if genErr != nil {
+		return "", genErr
+	}
 	fileKey := fmt.Sprintf("%s/%s", directory, fileName)
 
 	req, _ := s3Session.PutObjectRequest(&s3.PutObjectInput{
@@ -41,3 +49,17 @@ func GenerateS3UploadUrl(directory string) (string, error) {
 
 // Delete an S3 object located in the path of the S3 bucket.
 func DeleteS3Object(filePath string) {}
+
+func generateRandFileName(n int) (string, error) {
+	randomBytes, err := generateRandomBytes(n)
+	return base64.URLEncoding.EncodeToString(randomBytes), err
+}
+
+func generateRandomBytes(n int) ([]byte, error) {
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}

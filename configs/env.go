@@ -42,3 +42,10 @@ func EnvTokenSecrets() (access, refresh string) {
 	refresh = os.Getenv("REFRESH_TOKEN_SECRET")
 	return
 }
+
+func EnvAWSCredentials() (accessKey, secretKey string) {
+	EnvValidator()
+	accessKey = os.Getenv("AWS_ACCESS_KEY_ID")
+	secretKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
+	return
+}
