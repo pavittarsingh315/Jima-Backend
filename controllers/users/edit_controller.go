@@ -185,7 +185,10 @@ func EditProfilePicture(c *fiber.Ctx) error {
 		oldImageSlice := strings.Split(body.OldProfilePicture, "/")
 		oldImageName := oldImageSlice[len(oldImageSlice)-1]
 		oldImagePath := fmt.Sprintf("profilePictures/%s", oldImageName)
-		configs.DeleteS3Object(oldImagePath)
+		deleteErr := configs.DeleteS3Object(oldImagePath)
+		if deleteErr != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+		}
 	}
 
 	update := bson.M{"profilePicture": body.NewProfilePicture, "miniProfilePicture": body.NewProfilePicture, "lastUpdate": time.Now()}

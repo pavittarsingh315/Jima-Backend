@@ -48,11 +48,15 @@ func GenerateS3UploadUrl(directory string) (string, error) {
 }
 
 // Delete an S3 object located in the path of the S3 bucket.
-func DeleteS3Object(filePath string) {
-	s3Session.DeleteObject(&s3.DeleteObjectInput{
+func DeleteS3Object(filePath string) error {
+	_, err := s3Session.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(filePath),
 	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func generateRandFileName(n int) (string, error) {
