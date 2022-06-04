@@ -2,8 +2,8 @@ package configs
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -48,18 +48,23 @@ func GenerateS3UploadUrl(directory string) (string, error) {
 }
 
 // Delete an S3 object located in the path of the S3 bucket.
-func DeleteS3Object(filePath string) {}
-
-func generateRandFileName(n int) (string, error) {
-	randomBytes, err := generateRandomBytes(n)
-	return base64.URLEncoding.EncodeToString(randomBytes), err
+func DeleteS3Object(filePath string) {
+	s3Session.DeleteObject(&s3.DeleteObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(filePath),
+	})
 }
 
-func generateRandomBytes(n int) ([]byte, error) {
-	b := make([]byte, n)
-	_, err := rand.Read(b)
-	if err != nil {
-		return nil, err
+func generateRandFileName(n int) (string, error) {
+	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-"
+	ret := make([]byte, n)
+	for i := 0; i < n; i++ {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			return "", err
+		}
+		ret[i] = letters[num.Int64()]
 	}
-	return b, nil
+
+	return string(ret), nil
 }

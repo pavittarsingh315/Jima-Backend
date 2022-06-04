@@ -6,6 +6,7 @@ import (
 	"NeraJima/requests"
 	"NeraJima/responses"
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -181,7 +182,10 @@ func EditProfilePicture(c *fiber.Ctx) error {
 	}
 
 	if body.OldProfilePicture != "https://nerajima.s3.us-west-1.amazonaws.com/default.jpg" {
-		configs.DeleteS3Object("")
+		oldImageSlice := strings.Split(body.OldProfilePicture, "/")
+		oldImageName := oldImageSlice[len(oldImageSlice)-1]
+		oldImagePath := fmt.Sprintf("profilePictures/%s", oldImageName)
+		configs.DeleteS3Object(oldImagePath)
 	}
 
 	update := bson.M{"profilePicture": body.NewProfilePicture, "miniProfilePicture": body.NewProfilePicture, "lastUpdate": time.Now()}
