@@ -173,7 +173,7 @@ func EditProfilePicture(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Bad request..."}})
 	}
 
-	if body.NewProfilePicture == "" || body.OldProfilePicture == "" {
+	if body.NewProfilePicture == "" || body.OldProfilePicture == "" || body.NewMiniProfilePicture == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Please include all fields."}})
 	}
 
@@ -182,16 +182,18 @@ func EditProfilePicture(c *fiber.Ctx) error {
 	}
 
 	if body.OldProfilePicture != "https://nerajima.s3.us-west-1.amazonaws.com/default.jpg" {
-		oldImageSlice := strings.Split(body.OldProfilePicture, "/")
-		oldImageName := oldImageSlice[len(oldImageSlice)-1]
-		oldImagePath := fmt.Sprintf("profilePictures/%s", oldImageName)
-		deleteErr := configs.DeleteS3Object(oldImagePath)
-		if deleteErr != nil {
+		oldImgSlice := strings.Split(body.OldProfilePicture, "/")
+		oldImgName := oldImgSlice[len(oldImgSlice)-1]
+		oldImgPathL := fmt.Sprintf("profilePictures/large/%s", oldImgName)
+		oldImgPathM := fmt.Sprintf("profilePictures/mini/%s", oldImgName)
+		deleteErr1 := configs.DeleteS3Object(oldImgPathL)
+		deleteErr2 := configs.DeleteS3Object(oldImgPathM)
+		if deleteErr1 != nil || deleteErr2 != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 		}
 	}
 
-	update := bson.M{"profilePicture": body.NewProfilePicture, "miniProfilePicture": body.NewProfilePicture, "lastUpdate": time.Now()}
+	update := bson.M{"profilePicture": body.NewProfilePicture, "miniProfilePicture": body.NewMiniProfilePicture, "lastUpdate": time.Now()}
 	_, updateProfileErr := configs.ProfileCollection.UpdateOne(ctx, bson.M{"userId": reqProfile.UserId}, bson.M{"$set": update})
 	if updateProfileErr != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})

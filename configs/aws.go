@@ -27,11 +27,7 @@ var s3Session = s3.New(session.Must(session.NewSession(&aws.Config{
 })))
 
 // Generate an upload url that'll put a file in an S3 bucket in a specific directory.
-func GenerateS3UploadUrl(directory string) (string, error) {
-	fileName, genErr := generateRandFileName(64)
-	if genErr != nil {
-		return "", genErr
-	}
+func GenerateS3UploadUrl(directory, fileName string) (string, error) {
 	fileKey := fmt.Sprintf("%s/%s", directory, fileName)
 
 	req, _ := s3Session.PutObjectRequest(&s3.PutObjectInput{
@@ -59,7 +55,7 @@ func DeleteS3Object(filePath string) error {
 	return nil
 }
 
-func generateRandFileName(n int) (string, error) {
+func GenerateRandS3FileName(n int) (string, error) {
 	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-"
 	ret := make([]byte, n)
 	for i := 0; i < n; i++ {
