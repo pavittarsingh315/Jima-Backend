@@ -15,4 +15,6 @@ func UserRouter(group fiber.Router) {
 	router.Put("/edit/bio", middleware.UserAuthHandler, users.EditBio)
 	router.Put("/edit/blacklistmessage", middleware.UserAuthHandler, users.EditBlacklistMessage)
 	router.Put("/edit/profilePicture", middleware.UserAuthHandler, users.EditProfilePicture)
+
+	router.Get("/profile/search/user/:query", middleware.UserAuthHandler, users.SearchForUser)
 }
