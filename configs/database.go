@@ -13,6 +13,7 @@ import (
 var UserCollection *mongo.Collection
 var TempObjCollection *mongo.Collection
 var ProfileCollection *mongo.Collection
+var SearchCollection *mongo.Collection
 
 func ConnectDatabase() {
 	client, err := mongo.NewClient(options.Client().ApplyURI(EnvMongoUri()))
@@ -37,5 +38,6 @@ func ConnectDatabase() {
 	UserCollection = client.Database("Authentication").Collection("users")
 	TempObjCollection = client.Database("Authentication").Collection("temporaryobjects")
 	ProfileCollection = client.Database("Profiles").Collection("profiles")
+	SearchCollection = client.Database("Profiles").Collection("searches")
 	fmt.Println("Database connection established...")
 }
