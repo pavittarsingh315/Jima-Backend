@@ -65,7 +65,7 @@ func RemoveSearchFromHistory(c *fiber.Ctx) error {
 	defer cancel()
 
 	index, _ := strconv.Atoi(c.Params("index"))
-	if index < 0 || index > 10 {
+	if index < 0 || index > 21 {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Search out of range..."}})
 	}
 
@@ -139,7 +139,7 @@ func AddSearchHistory(c *fiber.Ctx) error {
 		copy(currentHistory[1:], currentHistory)    // move all slice items once to the right
 		currentHistory[0] = query                   // make first item the query
 
-		if len(currentHistory) > 11 {
+		if len(currentHistory) > 22 {
 			currentHistory = currentHistory[:len(currentHistory)-1] // remove last item from slice
 		}
 		update := bson.M{"queries": currentHistory}
