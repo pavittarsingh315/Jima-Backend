@@ -31,12 +31,12 @@ func SearchForUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
 
-	var results []struct {
+	var results = []struct {
 		Id                 primitive.ObjectID `json:"profileId" bson:"_id,omitempty"`
 		Username           string             `json:"username,omitempty"`
 		Name               string             `json:"name,omitempty"`
 		MiniProfilePicture string             `json:"miniProfilePicture,omitempty"`
-	}
+	}{}
 	if err = cursor.All(ctx, &results); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
