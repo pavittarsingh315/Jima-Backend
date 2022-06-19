@@ -21,4 +21,16 @@ func UserRouter(group fiber.Router) {
 	router.Put("/profile/search/history/add/:query", middleware.UserAuthHandler, users.AddSearchHistory)
 	router.Put("/profile/search/history/remove/:index", middleware.UserAuthHandler, users.RemoveSearchFromHistory)
 	router.Put("/profile/search/history/clear", middleware.UserAuthHandler, users.ClearSearchHistory)
+
+	router.Get("/profile/get/:profileId", middleware.UserAuthHandler, users.GetAProfile)
+
+	router.Post("/profile/follow/:profileId", middleware.UserAuthHandler, users.FollowAUser)
+	router.Delete("/profile/unfollow/:profileId", middleware.UserAuthHandler, users.UnfollowAUser)
+	router.Delete("/profile/followers/remove/:profileId", middleware.UserAuthHandler, users.RemoveAFollower)
+	router.Get("/profile/followers/:profileId", middleware.UserAuthHandler, users.GetProfileFollowers)
+	router.Get("/profile/following/:profileId", middleware.UserAuthHandler, users.GetProfileFollowing)
+
+	router.Post("/profile/whitelist/add/:profileId", middleware.UserAuthHandler, users.AddUserToWhitelist)
+	router.Delete("/profile/whitelist/remove/:profileId", middleware.UserAuthHandler, users.RemoveUserFromWhitelist)
+	router.Get("/profile/whitelist/get", middleware.UserAuthHandler, users.GetWhitelist)
 }
