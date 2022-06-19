@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func GetAProfile(c *fiber.Ctx) error {
@@ -18,7 +19,8 @@ func GetAProfile(c *fiber.Ctx) error {
 	defer cancel()
 
 	profileId, _ := primitive.ObjectIDFromHex(c.Params("profileId"))
-	err := configs.ProfileCollection.FindOne(ctx, bson.M{"_id": profileId}).Decode(&profile)
+	fields := options.FindOne().SetProjection(bson.D{{Key: "userId", Value: 0}, {Key: "miniProfilePicture", Value: 0}, {Key: "lastUpdate", Value: 0}})
+	err := configs.ProfileCollection.FindOne(ctx, bson.M{"_id": profileId}, fields).Decode(&profile)
 	if err != nil { // error => user with profileId doesn't exist
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Could not retrieve user."}})
 	}
