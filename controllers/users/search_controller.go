@@ -56,12 +56,7 @@ func SearchForUser(c *fiber.Ctx) error {
 	}
 	defer cursor.Close(ctx)
 
-	var results = []struct {
-		Id                 primitive.ObjectID `json:"profileId" bson:"_id,omitempty"`
-		Username           string             `json:"username,omitempty"`
-		Name               string             `json:"name,omitempty"`
-		MiniProfilePicture string             `json:"miniProfilePicture,omitempty"`
-	}{}
+	var results = []models.MiniProfile{}
 	if err = cursor.All(ctx, &results); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
