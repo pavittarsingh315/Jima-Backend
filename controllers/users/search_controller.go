@@ -6,6 +6,7 @@ import (
 	"NeraJima/responses"
 	"context"
 	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 	"time"
@@ -17,11 +18,14 @@ import (
 )
 
 func SearchForUser(c *fiber.Ctx) error {
+	page := c.Locals("page").(int64)
+	limit := c.Locals("limit").(int64)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	username, _ := url.QueryUnescape(c.Params("query"))
-	regexPattern := fmt.Sprintf("^%s.*", username)
+	query, _ := url.QueryUnescape(c.Params("query"))
+	regexPattern := fmt.Sprintf("^%s.*", query)
 
 	filter := bson.D{{
 		Key: "$or",
@@ -36,10 +40,17 @@ func SearchForUser(c *fiber.Ctx) error {
 			}},
 		},
 	}}
+	options := options.Find()
+	options.SetLimit(limit)
+	options.SetSkip((page - 1) * limit)
+	options.SetProjection(bson.D{{Key: "username", Value: 1}, {Key: "name", Value: 1}, {Key: "miniProfilePicture", Value: 1}})
 
-	numDocsRetrievedLimit := options.Find().SetLimit(10)
-	fields := options.Find().SetProjection(bson.D{{Key: "username", Value: 1}, {Key: "name", Value: 1}, {Key: "miniProfilePicture", Value: 1}})
-	cursor, err := configs.ProfileCollection.Find(ctx, filter, numDocsRetrievedLimit, fields)
+	totalObjects, err := configs.ProfileCollection.CountDocuments(ctx, filter)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	}
+
+	cursor, err := configs.ProfileCollection.Find(ctx, filter, options)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
@@ -55,7 +66,17 @@ func SearchForUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": results}})
+	return c.Status(fiber.StatusOK).JSON(
+		responses.SuccessResponse{
+			Status:  fiber.StatusOK,
+			Message: "Success",
+			Data: &fiber.Map{
+				"current_page": page,
+				"last_page":    math.Ceil(float64(totalObjects) / float64(limit)),
+				"data":         results,
+			},
+		},
+	)
 }
 
 func GetSearchHistory(c *fiber.Ctx) error {

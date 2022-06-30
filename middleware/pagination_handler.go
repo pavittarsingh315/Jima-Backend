@@ -20,8 +20,13 @@ func PaginationHandler(c *fiber.Ctx) error {
 	if limitParam := c.Query("limit"); limitParam != "" {
 		limitValue, _ := strconv.Atoi(limitParam)
 		if limitValue >= 1 {
-			limit = int64(limitValue)
+			if limitValue > 100 {
+				limit = 100
+			} else {
+				limit = int64(limitValue)
+			}
 		}
+
 	}
 
 	c.Locals("page", page)

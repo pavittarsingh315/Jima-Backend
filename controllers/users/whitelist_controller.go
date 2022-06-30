@@ -82,6 +82,10 @@ func RemoveUserFromWhitelist(c *fiber.Ctx) error {
 }
 
 func GetWhitelist(c *fiber.Ctx) error {
-	// get whitelist for user making request
+	/*
+	   Query users in whitelist:
+	   1. Match the query to a profile username or name.
+	   2. Match the resulting profile and their ids to whitelist objs where reqProfile is owner and profile id is allowed.
+	*/
 	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "Got whitelist"}})
 }
