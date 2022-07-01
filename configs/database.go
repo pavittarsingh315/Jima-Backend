@@ -19,7 +19,7 @@ var WhitelistCollection *mongo.Collection
 
 var DevCollection *mongo.Collection
 
-func ConnectDatabase() {
+func ConnectDatabase() *mongo.Client {
 	client, err := mongo.NewClient(options.Client().ApplyURI(EnvMongoUri()))
 	if err != nil {
 		log.Fatal(err)
@@ -41,6 +41,7 @@ func ConnectDatabase() {
 
 	UserCollection = client.Database("Authentication").Collection("users")
 	TempObjCollection = client.Database("Authentication").Collection("temporaryobjects")
+
 	ProfileCollection = client.Database("Profiles").Collection("profiles")
 	SearchCollection = client.Database("Profiles").Collection("searches")
 	RelationCollection = client.Database("Profiles").Collection("relations")
@@ -49,4 +50,6 @@ func ConnectDatabase() {
 	DevCollection = client.Database("dev").Collection("items")
 
 	fmt.Println("Database connection established...")
+
+	return client
 }

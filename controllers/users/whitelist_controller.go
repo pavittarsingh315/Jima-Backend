@@ -11,7 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func AddUserToWhitelist(c *fiber.Ctx) error {
@@ -85,44 +85,51 @@ func RemoveUserFromWhitelist(c *fiber.Ctx) error {
 
 func GetWhitelist(c *fiber.Ctx) error {
 	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
-	totalObjects := reqProfile.NumWhitelisted
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
-	search := c.Query("search", "")
+	// search := c.Query("search", "")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "ownerId", Value: reqProfile.Id}}}}
+	lookupStage := bson.D{{Key: "$lookup", Value: bson.D{
+		{Key: "from", Value: "profiles"},
+		{Key: "localField", Value: "allowedId"},
+		{Key: "foreignField", Value: "_id"},
+		{Key: "as", Value: "profile"},
+	}}}
+	// search stage here
+	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
+	limitStage := bson.D{{Key: "$limit", Value: limit}}
+	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
+
+	aggPipeline := mongo.Pipeline{matchStage, lookupStage, skipStage, limitStage, unwindStage}
+	cursor, err := configs.WhitelistCollection.Aggregate(ctx, aggPipeline)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	}
+	defer cursor.Close(ctx)
+
 	var whitelistedUsers = []models.MiniProfile{}
-
-	if search != "" {
-		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Under development..."}})
-	} else {
-		filter := bson.M{"ownerId": reqProfile.Id}
-		findOptions := options.Find()
-		findOptions.SetLimit(limit)
-		findOptions.SetSkip((page - 1) * limit)
-		findOptions.SetProjection(bson.M{"allowedId": 1})
-
-		cursor, err := configs.WhitelistCollection.Find(ctx, filter, findOptions)
-		if err != nil {
+	var totalObjects int = 0
+	for cursor.Next(ctx) {
+		var object struct {
+			Id        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+			OwnerId   primitive.ObjectID `json:"ownerId" bson:"ownerId,omitempty"`
+			AllowedId primitive.ObjectID `json:"allowedId" bson:"allowedId,omitempty"`
+			Profile   models.Profile     `json:"profile" bson:"profile,omitempty"`
+		}
+		if err := cursor.Decode(&object); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 		}
-		defer cursor.Close(ctx)
-
-		for cursor.Next(ctx) {
-			var whitelistObj models.Whitelist
-			var whitelistUser models.MiniProfile
-
-			cursor.Decode(&whitelistObj)
-			findOneOptions := options.FindOne()
-			findOneOptions.SetProjection(bson.D{{Key: "username", Value: 1}, {Key: "name", Value: 1}, {Key: "miniProfilePicture", Value: 1}})
-
-			err := configs.ProfileCollection.FindOne(ctx, bson.M{"_id": whitelistObj.AllowedId}, findOneOptions).Decode(&whitelistUser)
-			if err != nil { // error => user does not exist
-				whitelistUser = models.MiniProfile{Username: "Deleted User", Name: "Deleted User", MiniProfilePicture: "https://nerajima.s3.us-west-1.amazonaws.com/default.jpg"}
-			}
-			whitelistedUsers = append(whitelistedUsers, whitelistUser)
+		var whitelistedUser = models.MiniProfile{
+			Id:                 object.Profile.Id,
+			Username:           object.Profile.Username,
+			Name:               object.Profile.Name,
+			MiniProfilePicture: object.Profile.MiniProfilePicture,
 		}
+		whitelistedUsers = append(whitelistedUsers, whitelistedUser)
+		totalObjects++
 	}
 
 	return c.Status(fiber.StatusOK).JSON(
