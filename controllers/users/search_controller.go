@@ -45,11 +45,6 @@ func SearchForUser(c *fiber.Ctx) error {
 	options.SetSkip((page - 1) * limit)
 	options.SetProjection(bson.D{{Key: "username", Value: 1}, {Key: "name", Value: 1}, {Key: "miniProfilePicture", Value: 1}})
 
-	totalObjects, err := configs.ProfileCollection.CountDocuments(ctx, filter)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
-	}
-
 	cursor, err := configs.ProfileCollection.Find(ctx, filter, options)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
@@ -57,8 +52,14 @@ func SearchForUser(c *fiber.Ctx) error {
 	defer cursor.Close(ctx)
 
 	var results = []models.MiniProfile{}
-	if err = cursor.All(ctx, &results); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	var totalObjects int = 0
+	for cursor.Next(ctx) {
+		var result models.MiniProfile
+		if err := cursor.Decode(&result); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+		}
+		results = append(results, result)
+		totalObjects++
 	}
 
 	return c.Status(fiber.StatusOK).JSON(
