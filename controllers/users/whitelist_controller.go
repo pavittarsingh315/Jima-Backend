@@ -87,7 +87,7 @@ func GetWhitelist(c *fiber.Ctx) error {
 	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
-	// search := c.Query("search", "")
+	search := c.Query("search", "")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -98,12 +98,24 @@ func GetWhitelist(c *fiber.Ctx) error {
 		{Key: "foreignField", Value: "_id"},
 		{Key: "as", Value: "profile"},
 	}}}
-	// search stage here
+	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
+	searchStage := bson.D{{Key: "$match", Value: bson.D{{
+		Key: "$or",
+		Value: []bson.D{
+			{{
+				Key:   "profile.username",
+				Value: bson.D{{Key: "$regex", Value: primitive.Regex{Options: "i", Pattern: search}}},
+			}},
+			{{
+				Key:   "profile.name",
+				Value: bson.D{{Key: "$regex", Value: primitive.Regex{Options: "i", Pattern: search}}},
+			}},
+		},
+	}}}}
 	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
 	limitStage := bson.D{{Key: "$limit", Value: limit}}
-	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
 
-	aggPipeline := mongo.Pipeline{matchStage, lookupStage, skipStage, limitStage, unwindStage}
+	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, searchStage, skipStage, limitStage}
 	cursor, err := configs.WhitelistCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
