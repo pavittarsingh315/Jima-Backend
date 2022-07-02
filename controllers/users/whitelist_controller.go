@@ -98,6 +98,8 @@ func GetWhitelist(c *fiber.Ctx) error {
 		{Key: "foreignField", Value: "_id"},
 		{Key: "as", Value: "profile"},
 	}}}
+	// The count below has nothing to do with getting whitelist list. it is to update the profile since when a user is deleted, the numwhitelisted of the this profile isn't decremented. this fixes that
+	// count # of docs here and project value into each doc. then before returning response, check if # docs == reqProfile.NumWhitelisted. if not, update the profile's value
 	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
 	searchStage := bson.D{{Key: "$match", Value: bson.D{{
 		Key: "$or",
@@ -112,10 +114,12 @@ func GetWhitelist(c *fiber.Ctx) error {
 			}},
 		},
 	}}}}
+	// count # docs here and project value into each doc. then in the for loop, get the # docs and set it equal to totalObjects
+	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "profile.numFollowers", Value: -1}}}}
 	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
 	limitStage := bson.D{{Key: "$limit", Value: limit}}
 
-	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, searchStage, skipStage, limitStage}
+	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, searchStage, sortStage, skipStage, limitStage}
 	cursor, err := configs.WhitelistCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})

@@ -5,7 +5,6 @@ import (
 	"NeraJima/models"
 	"NeraJima/responses"
 	"context"
-	"fmt"
 	"math"
 	"net/url"
 	"strconv"
@@ -14,7 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func SearchForUser(c *fiber.Ctx) error {
@@ -24,28 +23,29 @@ func SearchForUser(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	query, _ := url.QueryUnescape(c.Params("query"))
-	regexPattern := fmt.Sprintf("^%s.*", query)
+	search, _ := url.QueryUnescape(c.Params("query"))
 
-	filter := bson.D{{
+	searchStage := bson.D{{Key: "$match", Value: bson.D{{
 		Key: "$or",
 		Value: []bson.D{
 			{{
 				Key:   "username",
-				Value: bson.D{{Key: "$regex", Value: primitive.Regex{Options: "i", Pattern: regexPattern}}},
+				Value: bson.D{{Key: "$regex", Value: primitive.Regex{Options: "i", Pattern: search}}},
 			}},
 			{{
 				Key:   "name",
-				Value: bson.D{{Key: "$regex", Value: primitive.Regex{Options: "i", Pattern: regexPattern}}},
+				Value: bson.D{{Key: "$regex", Value: primitive.Regex{Options: "i", Pattern: search}}},
 			}},
 		},
-	}}
-	options := options.Find()
-	options.SetLimit(limit)
-	options.SetSkip((page - 1) * limit)
-	options.SetProjection(bson.D{{Key: "username", Value: 1}, {Key: "name", Value: 1}, {Key: "miniProfilePicture", Value: 1}})
+	}}}}
+	// count # docs here and project value into each doc. then in the for loop, get the # docs and set it equal to totalObjects
+	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "numFollowers", Value: -1}}}}
+	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
+	limitStage := bson.D{{Key: "$limit", Value: limit}}
+	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "username", Value: 1}, {Key: "name", Value: 1}, {Key: "miniProfilePicture", Value: 1}}}}
 
-	cursor, err := configs.ProfileCollection.Find(ctx, filter, options)
+	aggPipeline := mongo.Pipeline{searchStage, sortStage, skipStage, limitStage, projectStage}
+	cursor, err := configs.ProfileCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
