@@ -30,3 +30,11 @@ type Profile struct {
 
 // bson has omitempty because if we update an obj and don't include all fields, the db will replace those fields with empty
 // don't omitempty the int fields cause they are allowed to be zero which go considers as empty.
+
+// IMPORTANT: Struct is meant purely for API responses, not any database interactions
+type MiniProfile struct {
+	Id                 primitive.ObjectID `json:"profileId" bson:"_id,omitempty"`
+	Username           string             `json:"username,omitempty"`
+	Name               string             `json:"name,omitempty"`
+	MiniProfilePicture string             `json:"miniProfilePicture,omitempty"`
+}

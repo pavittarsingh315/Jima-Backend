@@ -5,7 +5,7 @@ import (
 	"NeraJima/models"
 	"NeraJima/responses"
 	"context"
-	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 	"time"
@@ -13,35 +13,66 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func SearchForUser(c *fiber.Ctx) error {
+	page := c.Locals("page").(int64)
+	limit := c.Locals("limit").(int64)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	username, _ := url.QueryUnescape(c.Params("query"))
-	regexPattern := fmt.Sprintf("^%s.*", username)
+	search, _ := url.QueryUnescape(c.Params("query"))
 
-	filter := bson.D{{Key: "username", Value: bson.D{{Key: "$regex", Value: primitive.Regex{Options: "i", Pattern: regexPattern}}}}}
-	numDocsRetrievedLimit := options.Find().SetLimit(10)
-	fields := options.Find().SetProjection(bson.D{{Key: "username", Value: 1}, {Key: "name", Value: 1}, {Key: "miniProfilePicture", Value: 1}})
-	cursor, err := configs.ProfileCollection.Find(ctx, filter, numDocsRetrievedLimit, fields)
+	searchStage := bson.D{{Key: "$match", Value: bson.D{{
+		Key: "$or",
+		Value: []bson.D{
+			{{
+				Key:   "username",
+				Value: bson.D{{Key: "$regex", Value: primitive.Regex{Options: "i", Pattern: search}}},
+			}},
+			{{
+				Key:   "name",
+				Value: bson.D{{Key: "$regex", Value: primitive.Regex{Options: "i", Pattern: search}}},
+			}},
+		},
+	}}}}
+	// count # docs here and project value into each doc. then in the for loop, get the # docs and set it equal to totalObjects
+	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "numFollowers", Value: -1}}}}
+	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
+	limitStage := bson.D{{Key: "$limit", Value: limit}}
+	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "username", Value: 1}, {Key: "name", Value: 1}, {Key: "miniProfilePicture", Value: 1}}}}
+
+	aggPipeline := mongo.Pipeline{searchStage, sortStage, skipStage, limitStage, projectStage}
+	cursor, err := configs.ProfileCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
+	defer cursor.Close(ctx)
 
-	var results = []struct {
-		Id                 primitive.ObjectID `json:"profileId" bson:"_id,omitempty"`
-		Username           string             `json:"username,omitempty"`
-		Name               string             `json:"name,omitempty"`
-		MiniProfilePicture string             `json:"miniProfilePicture,omitempty"`
-	}{}
-	if err = cursor.All(ctx, &results); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	var results = []models.MiniProfile{}
+	var totalObjects int = 0
+	for cursor.Next(ctx) {
+		var result models.MiniProfile
+		if err := cursor.Decode(&result); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+		}
+		results = append(results, result)
+		totalObjects++
 	}
 
-	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": results}})
+	return c.Status(fiber.StatusOK).JSON(
+		responses.SuccessResponse{
+			Status:  fiber.StatusOK,
+			Message: "Success",
+			Data: &fiber.Map{
+				"current_page": page,
+				"last_page":    math.Ceil(float64(totalObjects) / float64(limit)),
+				"data":         results,
+			},
+		},
+	)
 }
 
 func GetSearchHistory(c *fiber.Ctx) error {

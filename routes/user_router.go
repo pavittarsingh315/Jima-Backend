@@ -16,7 +16,7 @@ func UserRouter(group fiber.Router) {
 	router.Put("/edit/blacklistmessage", middleware.UserAuthHandler, users.EditBlacklistMessage)
 	router.Put("/edit/profilePicture", middleware.UserAuthHandler, users.EditProfilePicture)
 
-	router.Get("/profile/search/user/:query", middleware.UserAuthHandler, users.SearchForUser)
+	router.Get("/profile/search/user/:query", middleware.UserAuthHandler, middleware.PaginationHandler, users.SearchForUser)
 	router.Get("/profile/search/history/get", middleware.UserAuthHandler, users.GetSearchHistory)
 	router.Put("/profile/search/history/add/:query", middleware.UserAuthHandler, users.AddSearchHistory)
 	router.Put("/profile/search/history/remove/:index", middleware.UserAuthHandler, users.RemoveSearchFromHistory)
@@ -27,10 +27,10 @@ func UserRouter(group fiber.Router) {
 	router.Post("/profile/follow/:profileId", middleware.UserAuthHandler, users.FollowAUser)
 	router.Delete("/profile/unfollow/:profileId", middleware.UserAuthHandler, users.UnfollowAUser)
 	router.Delete("/profile/followers/remove/:profileId", middleware.UserAuthHandler, users.RemoveAFollower)
-	router.Get("/profile/followers/:profileId", middleware.UserAuthHandler, users.GetProfileFollowers)
-	router.Get("/profile/following/:profileId", middleware.UserAuthHandler, users.GetProfileFollowing)
+	router.Get("/profile/followers/:profileId", middleware.UserAuthHandler, middleware.PaginationHandler, users.GetProfileFollowers)
+	router.Get("/profile/following/:profileId", middleware.UserAuthHandler, middleware.PaginationHandler, users.GetProfileFollowing)
 
 	router.Post("/profile/whitelist/add/:profileId", middleware.UserAuthHandler, users.AddUserToWhitelist)
 	router.Delete("/profile/whitelist/remove/:profileId", middleware.UserAuthHandler, users.RemoveUserFromWhitelist)
-	router.Get("/profile/whitelist/get", middleware.UserAuthHandler, users.GetWhitelist)
+	router.Get("/profile/whitelist/get", middleware.UserAuthHandler, middleware.PaginationHandler, users.GetWhitelist)
 }
