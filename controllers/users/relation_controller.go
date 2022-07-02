@@ -179,8 +179,9 @@ func GetProfileFollowers(c *fiber.Ctx) error {
 	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "profile.numFollowers", Value: -1}}}}
 	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
 	limitStage := bson.D{{Key: "$limit", Value: limit}}
+	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
 
-	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, searchStage, sortStage, skipStage, limitStage}
+	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, searchStage, sortStage, skipStage, limitStage, projectStage}
 	cursor, err := configs.RelationCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": err.Error()}})
@@ -191,21 +192,13 @@ func GetProfileFollowers(c *fiber.Ctx) error {
 	var totalObjects int = 0
 	for cursor.Next(ctx) {
 		var object struct {
-			Id         primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-			FollowerId primitive.ObjectID `json:"followerId" bson:"followerId,omitempty"`
-			FollowedId primitive.ObjectID `json:"followedId" bson:"followedId,omitempty"`
-			Profile    models.Profile     `json:"profile" bson:"profile,omitempty"`
+			Id      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+			Profile models.MiniProfile `json:"profile" bson:"profile,omitempty"`
 		}
 		if err := cursor.Decode(&object); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 		}
-		var followerProfile = models.MiniProfile{
-			Id:                 object.Profile.Id,
-			Username:           object.Profile.Username,
-			Name:               object.Profile.Name,
-			MiniProfilePicture: object.Profile.MiniProfilePicture,
-		}
-		followerProfiles = append(followerProfiles, followerProfile)
+		followerProfiles = append(followerProfiles, object.Profile)
 		totalObjects++
 	}
 
@@ -261,8 +254,9 @@ func GetProfileFollowing(c *fiber.Ctx) error {
 	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "profile.numFollowers", Value: -1}}}}
 	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
 	limitStage := bson.D{{Key: "$limit", Value: limit}}
+	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
 
-	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, searchStage, sortStage, skipStage, limitStage}
+	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, searchStage, sortStage, skipStage, limitStage, projectStage}
 	cursor, err := configs.RelationCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": err.Error()}})
@@ -273,21 +267,13 @@ func GetProfileFollowing(c *fiber.Ctx) error {
 	var totalObjects int = 0
 	for cursor.Next(ctx) {
 		var object struct {
-			Id         primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-			FollowerId primitive.ObjectID `json:"followerId" bson:"followerId,omitempty"`
-			FollowedId primitive.ObjectID `json:"followedId" bson:"followedId,omitempty"`
-			Profile    models.Profile     `json:"profile" bson:"profile,omitempty"`
+			Id      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+			Profile models.MiniProfile `json:"profile" bson:"profile,omitempty"`
 		}
 		if err := cursor.Decode(&object); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 		}
-		var followedProfile = models.MiniProfile{
-			Id:                 object.Profile.Id,
-			Username:           object.Profile.Username,
-			Name:               object.Profile.Name,
-			MiniProfilePicture: object.Profile.MiniProfilePicture,
-		}
-		followedProfiles = append(followedProfiles, followedProfile)
+		followedProfiles = append(followedProfiles, object.Profile)
 		totalObjects++
 	}
 

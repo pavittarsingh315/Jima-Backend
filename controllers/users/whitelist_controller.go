@@ -118,8 +118,9 @@ func GetWhitelist(c *fiber.Ctx) error {
 	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "profile.numFollowers", Value: -1}}}}
 	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
 	limitStage := bson.D{{Key: "$limit", Value: limit}}
+	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
 
-	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, searchStage, sortStage, skipStage, limitStage}
+	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, searchStage, sortStage, skipStage, limitStage, projectStage}
 	cursor, err := configs.WhitelistCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
@@ -130,21 +131,13 @@ func GetWhitelist(c *fiber.Ctx) error {
 	var totalObjects int = 0
 	for cursor.Next(ctx) {
 		var object struct {
-			Id        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-			OwnerId   primitive.ObjectID `json:"ownerId" bson:"ownerId,omitempty"`
-			AllowedId primitive.ObjectID `json:"allowedId" bson:"allowedId,omitempty"`
-			Profile   models.Profile     `json:"profile" bson:"profile,omitempty"`
+			Id      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+			Profile models.MiniProfile `json:"profile" bson:"profile,omitempty"`
 		}
 		if err := cursor.Decode(&object); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 		}
-		var whitelistedUser = models.MiniProfile{
-			Id:                 object.Profile.Id,
-			Username:           object.Profile.Username,
-			Name:               object.Profile.Name,
-			MiniProfilePicture: object.Profile.MiniProfilePicture,
-		}
-		whitelistedUsers = append(whitelistedUsers, whitelistedUser)
+		whitelistedUsers = append(whitelistedUsers, object.Profile)
 		totalObjects++
 	}
 
