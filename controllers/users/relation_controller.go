@@ -6,6 +6,7 @@ import (
 	"NeraJima/responses"
 	"context"
 	"math"
+	"regexp"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -143,7 +144,7 @@ func RemoveAFollower(c *fiber.Ctx) error {
 func GetProfileFollowers(c *fiber.Ctx) error {
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
-	search := c.Query("search", "")
+	search := regexp.QuoteMeta(c.Query("search", ""))
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -218,7 +219,7 @@ func GetProfileFollowers(c *fiber.Ctx) error {
 func GetProfileFollowing(c *fiber.Ctx) error {
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
-	search := c.Query("search", "")
+	search := regexp.QuoteMeta(c.Query("search", ""))
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

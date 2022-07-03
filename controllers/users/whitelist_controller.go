@@ -6,6 +6,7 @@ import (
 	"NeraJima/responses"
 	"context"
 	"math"
+	"regexp"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -87,7 +88,7 @@ func GetWhitelist(c *fiber.Ctx) error {
 	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
-	search := c.Query("search", "")
+	search := regexp.QuoteMeta(c.Query("search", ""))
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
