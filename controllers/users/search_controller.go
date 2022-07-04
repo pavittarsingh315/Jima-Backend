@@ -148,14 +148,13 @@ func AddSearchHistory(c *fiber.Ctx) error {
 	defer cancel()
 
 	query, _ := url.QueryUnescape(c.Params("query"))
-	search := regexp.QuoteMeta(query)
 
 	err := configs.SearchCollection.FindOne(ctx, bson.M{"profileId": reqProfile.Id}).Decode(&searches)
 	if err != nil {
 		newSearch := models.Search{
 			Id:        primitive.NewObjectID(),
 			ProfileId: reqProfile.Id,
-			Queries:   []string{search},
+			Queries:   []string{query},
 		}
 		_, err := configs.SearchCollection.InsertOne(ctx, newSearch)
 		if err != nil {
@@ -163,7 +162,7 @@ func AddSearchHistory(c *fiber.Ctx) error {
 		}
 	} else {
 		currentHistory := searches.Queries
-		containsQuery, indexOfQuery := historyContains(currentHistory, search)
+		containsQuery, indexOfQuery := historyContains(currentHistory, query)
 		if containsQuery {
 			currentHistory = append(currentHistory[:indexOfQuery], currentHistory[indexOfQuery+1:]...) // remove query from slice
 		}
@@ -171,7 +170,7 @@ func AddSearchHistory(c *fiber.Ctx) error {
 		// prepend query to current history
 		currentHistory = append(currentHistory, "") // add empty string as last item in slice
 		copy(currentHistory[1:], currentHistory)    // move all slice items once to the right
-		currentHistory[0] = search                  // make first item the query
+		currentHistory[0] = query                   // make first item the query
 
 		if len(currentHistory) > 22 {
 			currentHistory = currentHistory[:len(currentHistory)-1] // remove last item from slice
