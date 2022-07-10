@@ -5,8 +5,6 @@ import (
 	"NeraJima/models"
 	"NeraJima/responses"
 	"context"
-	"math"
-	"regexp"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -144,7 +142,6 @@ func RemoveAFollower(c *fiber.Ctx) error {
 func GetProfileFollowers(c *fiber.Ctx) error {
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
-	search := regexp.QuoteMeta(c.Query("search", ""))
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -163,26 +160,12 @@ func GetProfileFollowers(c *fiber.Ctx) error {
 	// The count below has nothing to do with getting followers list. it is to update the profile since when a user is deleted, the numfollowers of the people they followed isnt decremented. this fixes that
 	// count # of docs here and project value into each doc. then before returning response, check if # docs == reqProfile.NumFollowers. if not, update the profile's value
 	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
-	searchStage := bson.D{{Key: "$match", Value: bson.D{{
-		Key: "$or",
-		Value: []bson.D{
-			{{
-				Key:   "profile.username",
-				Value: bson.D{{Key: "$regex", Value: primitive.Regex{Options: "i", Pattern: search}}},
-			}},
-			{{
-				Key:   "profile.name",
-				Value: bson.D{{Key: "$regex", Value: primitive.Regex{Options: "i", Pattern: search}}},
-			}},
-		},
-	}}}}
-	// count # docs here and project value into each doc. then in the for loop, get the # docs and set it equal to totalObjects
 	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "profile.numFollowers", Value: -1}}}}
 	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
 	limitStage := bson.D{{Key: "$limit", Value: limit}}
 	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
 
-	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, searchStage, sortStage, skipStage, limitStage, projectStage}
+	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, sortStage, skipStage, limitStage, projectStage}
 	cursor, err := configs.RelationCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": err.Error()}})
@@ -190,7 +173,6 @@ func GetProfileFollowers(c *fiber.Ctx) error {
 	defer cursor.Close(ctx)
 
 	var followerProfiles = []models.MiniProfile{}
-	var totalObjects int = 0
 	for cursor.Next(ctx) {
 		var object struct {
 			Id      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
@@ -200,7 +182,6 @@ func GetProfileFollowers(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 		}
 		followerProfiles = append(followerProfiles, object.Profile)
-		totalObjects++
 	}
 
 	return c.Status(fiber.StatusOK).JSON(
@@ -209,7 +190,7 @@ func GetProfileFollowers(c *fiber.Ctx) error {
 			Message: "Success",
 			Data: &fiber.Map{
 				"current_page": page,
-				"last_page":    math.Ceil(float64(totalObjects) / float64(limit)),
+				"last_page":    "currently not implemented...", // math.Ceil(float64(totalObjects) / float64(limit))
 				"data":         followerProfiles,
 			},
 		},
@@ -219,7 +200,6 @@ func GetProfileFollowers(c *fiber.Ctx) error {
 func GetProfileFollowing(c *fiber.Ctx) error {
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
-	search := regexp.QuoteMeta(c.Query("search", ""))
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -238,26 +218,12 @@ func GetProfileFollowing(c *fiber.Ctx) error {
 	// The count below has nothing to do with getting following list. it is to update the profile since when a user is deleted, the numfollowing of the people who followed them isn't decremented. this fixes that
 	// count # of docs here and project value into each doc. then before returning response, check if # docs == reqProfile.NumFollowing. if not, update the profile's value
 	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
-	searchStage := bson.D{{Key: "$match", Value: bson.D{{
-		Key: "$or",
-		Value: []bson.D{
-			{{
-				Key:   "profile.username",
-				Value: bson.D{{Key: "$regex", Value: primitive.Regex{Options: "i", Pattern: search}}},
-			}},
-			{{
-				Key:   "profile.name",
-				Value: bson.D{{Key: "$regex", Value: primitive.Regex{Options: "i", Pattern: search}}},
-			}},
-		},
-	}}}}
-	// count # docs here and project value into each doc. then in the for loop, get the # docs and set it equal to totalObjects
 	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "profile.numFollowers", Value: -1}}}}
 	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
 	limitStage := bson.D{{Key: "$limit", Value: limit}}
 	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
 
-	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, searchStage, sortStage, skipStage, limitStage, projectStage}
+	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, sortStage, skipStage, limitStage, projectStage}
 	cursor, err := configs.RelationCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": err.Error()}})
@@ -265,7 +231,6 @@ func GetProfileFollowing(c *fiber.Ctx) error {
 	defer cursor.Close(ctx)
 
 	var followedProfiles = []models.MiniProfile{}
-	var totalObjects int = 0
 	for cursor.Next(ctx) {
 		var object struct {
 			Id      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
@@ -275,7 +240,6 @@ func GetProfileFollowing(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 		}
 		followedProfiles = append(followedProfiles, object.Profile)
-		totalObjects++
 	}
 
 	return c.Status(fiber.StatusOK).JSON(
@@ -284,7 +248,7 @@ func GetProfileFollowing(c *fiber.Ctx) error {
 			Message: "Success",
 			Data: &fiber.Map{
 				"current_page": page,
-				"last_page":    math.Ceil(float64(totalObjects) / float64(limit)),
+				"last_page":    "currently not implemented...", // math.Ceil(float64(totalObjects) / float64(limit))
 				"data":         followedProfiles,
 			},
 		},
