@@ -139,6 +139,7 @@ func RemoveAFollower(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "User removed."}})
 }
 
+// TODO: Implement an efficient search/filtering element to the route. Also update the reqProfile's numFollowers if they're incorrect.
 func GetProfileFollowers(c *fiber.Ctx) error {
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
@@ -157,8 +158,6 @@ func GetProfileFollowers(c *fiber.Ctx) error {
 		{Key: "foreignField", Value: "_id"},
 		{Key: "as", Value: "profile"},
 	}}}
-	// The count below has nothing to do with getting followers list. it is to update the profile since when a user is deleted, the numfollowers of the people they followed isnt decremented. this fixes that
-	// count # of docs here and project value into each doc. then before returning response, check if # docs == reqProfile.NumFollowers. if not, update the profile's value
 	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
 	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "profile.numFollowers", Value: -1}}}}
 	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
@@ -197,6 +196,7 @@ func GetProfileFollowers(c *fiber.Ctx) error {
 	)
 }
 
+// TODO: Implement an efficient search/filtering element to the route. Also update the reqProfile's numFollowing if they're incorrect.
 func GetProfileFollowing(c *fiber.Ctx) error {
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
@@ -215,8 +215,6 @@ func GetProfileFollowing(c *fiber.Ctx) error {
 		{Key: "foreignField", Value: "_id"},
 		{Key: "as", Value: "profile"},
 	}}}
-	// The count below has nothing to do with getting following list. it is to update the profile since when a user is deleted, the numfollowing of the people who followed them isn't decremented. this fixes that
-	// count # of docs here and project value into each doc. then before returning response, check if # docs == reqProfile.NumFollowing. if not, update the profile's value
 	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
 	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "profile.numFollowers", Value: -1}}}}
 	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}

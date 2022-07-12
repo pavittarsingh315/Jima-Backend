@@ -33,4 +33,6 @@ func UserRouter(group fiber.Router) {
 	router.Post("/profile/whitelist/add/:profileId", middleware.UserAuthHandler, users.AddUserToWhitelist)
 	router.Delete("/profile/whitelist/remove/:profileId", middleware.UserAuthHandler, users.RemoveUserFromWhitelist)
 	router.Get("/profile/whitelist/get", middleware.UserAuthHandler, middleware.PaginationHandler, users.GetWhitelist)
+	router.Get("/profile/whitelist/subscriptions/get", middleware.UserAuthHandler, middleware.PaginationHandler, users.GetWhitelistSubscriptions)
+	router.Delete("/profile/whitelist/leave/:profileId", middleware.UserAuthHandler, users.LeaveWhitelist)
 }
