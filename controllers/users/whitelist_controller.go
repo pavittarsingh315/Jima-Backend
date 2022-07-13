@@ -17,7 +17,7 @@ func InviteToWhitelist(c *fiber.Ctx) error {
 	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
 	var whitelistObj models.Whitelist
 	var whitelistRelationObj models.WhitelistRelation
-	var toBeAddedProfile models.Profile
+	var toBeInvitedProfile models.Profile
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -37,7 +37,7 @@ func InviteToWhitelist(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "User is already whitelisted."}})
 	}
 
-	err = configs.ProfileCollection.FindOne(ctx, bson.M{"_id": profileId}).Decode(&toBeAddedProfile)
+	err = configs.ProfileCollection.FindOne(ctx, bson.M{"_id": profileId}).Decode(&toBeInvitedProfile)
 	if err != nil { // error => user doesn't exist
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Cannot invite a user that doesn't exist."}})
 	}
@@ -75,6 +75,7 @@ func RevokeWhitelistInvite(c *fiber.Ctx) error {
 func AcceptWhitelistInvite(c *fiber.Ctx) error {
 	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
 	var whitelistRelationObj models.WhitelistRelation
+	var senderProfile models.Profile
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -85,6 +86,11 @@ func AcceptWhitelistInvite(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "This user has not invited you."}})
 	}
 
+	err = configs.ProfileCollection.FindOneAndUpdate(ctx, bson.M{"_id": whitelistRelationObj.SenderId}, bson.M{"$inc": bson.M{"numWhitelisted": 1}}).Decode(&senderProfile)
+	if err != nil { // error => sender doesn't exist
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Cannot join a deleted user's whitelist."}})
+	}
+
 	newWhitelistObj := models.Whitelist{
 		Id:        primitive.NewObjectID(),
 		OwnerId:   whitelistRelationObj.SenderId,
@@ -93,11 +99,6 @@ func AcceptWhitelistInvite(c *fiber.Ctx) error {
 	_, err = configs.WhitelistCollection.InsertOne(ctx, newWhitelistObj)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Error. Please try again."}})
-	}
-
-	_, err = configs.ProfileCollection.UpdateOne(ctx, bson.M{"_id": whitelistRelationObj.SenderId}, bson.M{"$inc": bson.M{"numWhitelisted": 1}})
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "Invite accepted."}})
@@ -116,7 +117,119 @@ func DeclineWhitelistInvite(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "This user has not invited you."}})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "Invite Declined."}})
+	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "Invite declined."}})
+}
+
+func RequestWhitelistEntry(c *fiber.Ctx) error {
+	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
+	var whitelistObj models.Whitelist
+	var whitelistRelationObj models.WhitelistRelation
+	var toBeRequestedProfile models.Profile
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	profileId, _ := primitive.ObjectIDFromHex(c.Params("profileId"))
+
+	if reqProfile.Id == profileId {
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Cannot invite yourself."}})
+	}
+
+	err := configs.WhitelistRelationCollection.FindOne(ctx, bson.M{"senderId": reqProfile.Id, "receiverId": profileId, "type": "Request"}).Decode(&whitelistRelationObj)
+	if err == nil { // no error => request already sent
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Request already sent."}})
+	}
+
+	err = configs.WhitelistCollection.FindOne(ctx, bson.M{"ownerId": profileId, "allowedId": reqProfile.Id}).Decode(&whitelistObj)
+	if err == nil { // no error => user already has us whitelisted
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "You're already in this user's whitelist."}})
+	}
+
+	err = configs.ProfileCollection.FindOne(ctx, bson.M{"_id": profileId}).Decode(&toBeRequestedProfile)
+	if err != nil { // error => user doesn't exist
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Cannot request a user that doesn't exist."}})
+	}
+
+	newWhitelistRelationObj, err := models.NewWhitelistRelation(primitive.NewObjectID(), reqProfile.Id, profileId, "Request")
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	}
+	_, err = configs.WhitelistRelationCollection.InsertOne(ctx, newWhitelistRelationObj)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Error. Please try again."}})
+	}
+
+	// TODO: create notification
+
+	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "Request sent."}})
+}
+
+func CancelWhitelistEntryRequest(c *fiber.Ctx) error {
+	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
+	var whitelistRelationObj models.WhitelistRelation
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	requestId, _ := primitive.ObjectIDFromHex(c.Params("requestId"))
+
+	err := configs.WhitelistRelationCollection.FindOneAndDelete(ctx, bson.M{"_id": requestId, "senderId": reqProfile.Id, "type": "Request"}).Decode(&whitelistRelationObj)
+	if err != nil { // error => request doesn't exist
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "You have not requested to join this user's whitelist."}})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "Request canceled."}})
+}
+
+func AcceptWhitelistEntryRequest(c *fiber.Ctx) error {
+	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
+	var senderProfile models.Profile
+	var whitelistRelationObj models.WhitelistRelation
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	requestId, _ := primitive.ObjectIDFromHex(c.Params("requestId"))
+
+	err := configs.WhitelistRelationCollection.FindOneAndDelete(ctx, bson.M{"_id": requestId, "receiverId": reqProfile.Id, "type": "Request"}).Decode(&whitelistRelationObj)
+	if err != nil { // error => request doesn't exist
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "This user has not requested to be on your whitelist."}})
+	}
+
+	err = configs.ProfileCollection.FindOne(ctx, bson.M{"_id": whitelistRelationObj.SenderId}).Decode(&senderProfile)
+	if err != nil { // error => sender doesn't exist
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "Cannot admit a user that doesn't exist."}})
+	}
+
+	newWhitelistObj := models.Whitelist{
+		Id:        primitive.NewObjectID(),
+		OwnerId:   reqProfile.Id,
+		AllowedId: whitelistRelationObj.SenderId,
+	}
+	_, err = configs.WhitelistCollection.InsertOne(ctx, newWhitelistObj)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Error. Please try again."}})
+	}
+
+	_, err = configs.ProfileCollection.UpdateOne(ctx, bson.M{"_id": reqProfile.Id}, bson.M{"$inc": bson.M{"numWhitelisted": 1}})
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "Request accepted."}})
+}
+
+func DeclineWhitelistEntryRequest(c *fiber.Ctx) error {
+	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
+	var whitelistRelationObj models.WhitelistRelation
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	requestId, _ := primitive.ObjectIDFromHex(c.Params("requestId"))
+
+	err := configs.WhitelistRelationCollection.FindOneAndDelete(ctx, bson.M{"_id": requestId, "receiverId": reqProfile.Id, "type": "Request"}).Decode(&whitelistRelationObj)
+	if err != nil { // error => request doesn't exist
+		return c.Status(fiber.StatusBadRequest).JSON(responses.ErrorResponse{Status: fiber.StatusBadRequest, Message: "Error", Data: &fiber.Map{"data": "This user has not requested to be on your whitelist."}})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "Request declined."}})
 }
 
 func RemoveUserFromWhitelist(c *fiber.Ctx) error {
