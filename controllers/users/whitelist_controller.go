@@ -51,7 +51,7 @@ func InviteToWhitelist(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Error. Please try again."}})
 	}
 
-	// TODO: create notification
+	// TODO: create notification for receiver user
 
 	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "Invite sent."}})
 }
@@ -158,7 +158,7 @@ func RequestWhitelistEntry(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Error. Please try again."}})
 	}
 
-	// TODO: create notification
+	// TODO: create notification for receiver user
 
 	return c.Status(fiber.StatusOK).JSON(responses.SuccessResponse{Status: fiber.StatusOK, Message: "Success", Data: &fiber.Map{"data": "Request sent."}})
 }
