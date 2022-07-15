@@ -31,6 +31,7 @@ func PaginationHandler(c *fiber.Ctx) error {
 
 	c.Locals("page", page)
 	c.Locals("limit", limit)
+	c.Locals("skip", (page-1)*limit)
 
 	return c.Next()
 }

@@ -20,7 +20,7 @@ import (
 func SearchForUser(c *fiber.Ctx) error {
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
-
+	skip := c.Locals("skip").(int64)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -41,12 +41,15 @@ func SearchForUser(c *fiber.Ctx) error {
 		},
 	}}}}
 	// count # docs here and project value into each doc. then in the for loop, get the # docs and set it equal to totalObjects
+
+	// these 3 stages are optimized: https://stackoverflow.com/questions/24160037/skip-and-limit-in-aggregation-framework
 	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "numFollowers", Value: -1}}}}
-	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
-	limitStage := bson.D{{Key: "$limit", Value: limit}}
+	limitStage := bson.D{{Key: "$limit", Value: skip + limit}}
+	skipStage := bson.D{{Key: "$skip", Value: skip}}
+
 	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "username", Value: 1}, {Key: "name", Value: 1}, {Key: "miniProfilePicture", Value: 1}}}}
 
-	aggPipeline := mongo.Pipeline{searchStage, sortStage, skipStage, limitStage, projectStage}
+	aggPipeline := mongo.Pipeline{searchStage, sortStage, limitStage, skipStage, projectStage}
 	cursor, err := configs.ProfileCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})

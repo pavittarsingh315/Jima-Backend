@@ -144,6 +144,7 @@ func RemoveAFollower(c *fiber.Ctx) error {
 func GetProfileFollowers(c *fiber.Ctx) error {
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
+	skip := c.Locals("skip").(int64)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -153,6 +154,12 @@ func GetProfileFollowers(c *fiber.Ctx) error {
 	}
 
 	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "followedId", Value: profileId}}}}
+
+	// these 3 stages are optimized: https://stackoverflow.com/questions/24160037/skip-and-limit-in-aggregation-framework
+	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "createdDate", Value: -1}}}} // sort chronologically(newest to oldest)
+	limitStage := bson.D{{Key: "$limit", Value: skip + limit}}
+	skipStage := bson.D{{Key: "$skip", Value: skip}}
+
 	lookupStage := bson.D{{Key: "$lookup", Value: bson.D{
 		{Key: "from", Value: "profiles"},
 		{Key: "localField", Value: "followerId"},
@@ -160,12 +167,9 @@ func GetProfileFollowers(c *fiber.Ctx) error {
 		{Key: "as", Value: "profile"},
 	}}}
 	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
-	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "profile.numFollowers", Value: -1}}}}
-	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
-	limitStage := bson.D{{Key: "$limit", Value: limit}}
 	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
 
-	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, sortStage, skipStage, limitStage, projectStage}
+	aggPipeline := mongo.Pipeline{matchStage, sortStage, limitStage, skipStage, lookupStage, unwindStage, projectStage}
 	cursor, err := configs.RelationCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": err.Error()}})
@@ -201,6 +205,7 @@ func GetProfileFollowers(c *fiber.Ctx) error {
 func GetProfileFollowing(c *fiber.Ctx) error {
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
+	skip := c.Locals("skip").(int64)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -210,6 +215,12 @@ func GetProfileFollowing(c *fiber.Ctx) error {
 	}
 
 	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "followerId", Value: profileId}}}}
+
+	// these 3 stages are optimized: https://stackoverflow.com/questions/24160037/skip-and-limit-in-aggregation-framework
+	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "createdDate", Value: -1}}}} // sort chronologically(newest to oldest)
+	limitStage := bson.D{{Key: "$limit", Value: skip + limit}}
+	skipStage := bson.D{{Key: "$skip", Value: skip}}
+
 	lookupStage := bson.D{{Key: "$lookup", Value: bson.D{
 		{Key: "from", Value: "profiles"},
 		{Key: "localField", Value: "followedId"},
@@ -217,12 +228,9 @@ func GetProfileFollowing(c *fiber.Ctx) error {
 		{Key: "as", Value: "profile"},
 	}}}
 	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
-	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "profile.numFollowers", Value: -1}}}}
-	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
-	limitStage := bson.D{{Key: "$limit", Value: limit}}
 	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
 
-	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, sortStage, skipStage, limitStage, projectStage}
+	aggPipeline := mongo.Pipeline{matchStage, sortStage, limitStage, skipStage, lookupStage, unwindStage, projectStage}
 	cursor, err := configs.RelationCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": err.Error()}})

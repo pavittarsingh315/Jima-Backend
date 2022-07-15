@@ -290,10 +290,17 @@ func GetWhitelist(c *fiber.Ctx) error {
 	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
+	skip := c.Locals("skip").(int64)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "ownerId", Value: reqProfile.Id}}}}
+
+	// these 3 stages are optimized: https://stackoverflow.com/questions/24160037/skip-and-limit-in-aggregation-framework
+	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "createdDate", Value: -1}}}} // sort chronologically(newest to oldest)
+	limitStage := bson.D{{Key: "$limit", Value: skip + limit}}
+	skipStage := bson.D{{Key: "$skip", Value: skip}}
+
 	lookupStage := bson.D{{Key: "$lookup", Value: bson.D{
 		{Key: "from", Value: "profiles"},
 		{Key: "localField", Value: "allowedId"},
@@ -301,12 +308,9 @@ func GetWhitelist(c *fiber.Ctx) error {
 		{Key: "as", Value: "profile"},
 	}}}
 	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
-	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "profile.numFollowers", Value: -1}}}}
-	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
-	limitStage := bson.D{{Key: "$limit", Value: limit}}
 	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
 
-	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, sortStage, skipStage, limitStage, projectStage}
+	aggPipeline := mongo.Pipeline{matchStage, sortStage, limitStage, skipStage, lookupStage, unwindStage, projectStage}
 	cursor, err := configs.WhitelistCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
@@ -343,6 +347,7 @@ func GetWhitelistSubscriptions(c *fiber.Ctx) error {
 	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
+	skip := c.Locals("skip").(int64)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -354,12 +359,15 @@ func GetWhitelistSubscriptions(c *fiber.Ctx) error {
 		{Key: "as", Value: "profile"},
 	}}}
 	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
+
+	// these 3 stages are optimized: https://stackoverflow.com/questions/24160037/skip-and-limit-in-aggregation-framework
 	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "profile.username", Value: 1}}}} // sort alphabetically by username
-	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
-	limitStage := bson.D{{Key: "$limit", Value: limit}}
+	limitStage := bson.D{{Key: "$limit", Value: skip + limit}}
+	skipStage := bson.D{{Key: "$skip", Value: skip}}
+
 	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
 
-	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, sortStage, skipStage, limitStage, projectStage}
+	aggPipeline := mongo.Pipeline{matchStage, lookupStage, unwindStage, sortStage, limitStage, skipStage, projectStage}
 	cursor, err := configs.WhitelistCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
@@ -396,23 +404,27 @@ func GetWhitelistSentInvites(c *fiber.Ctx) error {
 	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
+	skip := c.Locals("skip").(int64)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "senderId", Value: reqProfile.Id}, {Key: "type", Value: "Invite"}}}}
+
+	// these 3 stages are optimized: https://stackoverflow.com/questions/24160037/skip-and-limit-in-aggregation-framework
+	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "createdDate", Value: -1}}}} // sort chronologically(newest to oldest)
+	limitStage := bson.D{{Key: "$limit", Value: skip + limit}}
+	skipStage := bson.D{{Key: "$skip", Value: skip}}
+
 	lookupStage := bson.D{{Key: "$lookup", Value: bson.D{
 		{Key: "from", Value: "profiles"},
 		{Key: "localField", Value: "receiverId"},
 		{Key: "foreignField", Value: "_id"},
 		{Key: "as", Value: "profile"},
 	}}}
-	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "createdDate", Value: -1}}}} // sort chronologically(newest to oldest)
-	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
-	limitStage := bson.D{{Key: "$limit", Value: limit}}
 	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
 	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
 
-	aggPipeline := mongo.Pipeline{matchStage, lookupStage, sortStage, skipStage, limitStage, unwindStage, projectStage}
+	aggPipeline := mongo.Pipeline{matchStage, sortStage, limitStage, skipStage, lookupStage, unwindStage, projectStage}
 	cursor, err := configs.WhitelistRelationCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
@@ -450,23 +462,27 @@ func GetWhitelistReceivedInvites(c *fiber.Ctx) error {
 	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
 	page := c.Locals("page").(int64)
 	limit := c.Locals("limit").(int64)
+	skip := c.Locals("skip").(int64)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "receiverId", Value: reqProfile.Id}, {Key: "type", Value: "Invite"}}}}
+
+	// these 3 stages are optimized: https://stackoverflow.com/questions/24160037/skip-and-limit-in-aggregation-framework
+	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "createdDate", Value: -1}}}} // sort chronologically(newest to oldest)
+	limitStage := bson.D{{Key: "$limit", Value: skip + limit}}
+	skipStage := bson.D{{Key: "$skip", Value: skip}}
+
 	lookupStage := bson.D{{Key: "$lookup", Value: bson.D{
 		{Key: "from", Value: "profiles"},
 		{Key: "localField", Value: "senderId"},
 		{Key: "foreignField", Value: "_id"},
 		{Key: "as", Value: "profile"},
 	}}}
-	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "createdDate", Value: -1}}}} // sort chronologically(newest to oldest)
-	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
-	limitStage := bson.D{{Key: "$limit", Value: limit}}
 	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
 	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
 
-	aggPipeline := mongo.Pipeline{matchStage, lookupStage, sortStage, skipStage, limitStage, unwindStage, projectStage}
+	aggPipeline := mongo.Pipeline{matchStage, sortStage, limitStage, skipStage, lookupStage, unwindStage, projectStage}
 	cursor, err := configs.WhitelistRelationCollection.Aggregate(ctx, aggPipeline)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
