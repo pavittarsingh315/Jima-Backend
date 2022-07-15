@@ -152,9 +152,10 @@ func AddSearchHistory(c *fiber.Ctx) error {
 	err := configs.SearchCollection.FindOne(ctx, bson.M{"profileId": reqProfile.Id}).Decode(&searches)
 	if err != nil {
 		newSearch := models.Search{
-			Id:        primitive.NewObjectID(),
-			ProfileId: reqProfile.Id,
-			Queries:   []string{query},
+			Id:          primitive.NewObjectID(),
+			ProfileId:   reqProfile.Id,
+			Queries:     []string{query},
+			CreatedDate: time.Now(),
 		}
 		_, err := configs.SearchCollection.InsertOne(ctx, newSearch)
 		if err != nil {

@@ -92,9 +92,10 @@ func AcceptWhitelistInvite(c *fiber.Ctx) error {
 	}
 
 	newWhitelistObj := models.Whitelist{
-		Id:        primitive.NewObjectID(),
-		OwnerId:   whitelistRelationObj.SenderId,
-		AllowedId: reqProfile.Id,
+		Id:          primitive.NewObjectID(),
+		OwnerId:     whitelistRelationObj.SenderId,
+		AllowedId:   reqProfile.Id,
+		CreatedDate: time.Now(),
 	}
 	_, err = configs.WhitelistCollection.InsertOne(ctx, newWhitelistObj)
 	if err != nil {
@@ -199,9 +200,10 @@ func AcceptWhitelistEntryRequest(c *fiber.Ctx) error {
 	}
 
 	newWhitelistObj := models.Whitelist{
-		Id:        primitive.NewObjectID(),
-		OwnerId:   reqProfile.Id,
-		AllowedId: whitelistRelationObj.SenderId,
+		Id:          primitive.NewObjectID(),
+		OwnerId:     reqProfile.Id,
+		AllowedId:   whitelistRelationObj.SenderId,
+		CreatedDate: time.Now(),
 	}
 	_, err = configs.WhitelistCollection.InsertOne(ctx, newWhitelistObj)
 	if err != nil {
@@ -384,6 +386,62 @@ func GetWhitelistSubscriptions(c *fiber.Ctx) error {
 				"current_page": page,
 				"last_page":    "currently not implemented...", // math.Ceil(float64(totalObjects) / float64(limit))
 				"data":         subscriptions,
+			},
+		},
+	)
+}
+
+func GetWhitelistSentInvites(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusOK).JSON(
+		responses.SuccessResponse{
+			Status:  fiber.StatusOK,
+			Message: "Success",
+			Data: &fiber.Map{
+				"current_page": 1,
+				"last_page":    "currently not implemented...", // math.Ceil(float64(totalObjects) / float64(limit))
+				"data":         "Got Sent Invites",
+			},
+		},
+	)
+}
+
+func GetWhitelistReceivedInvites(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusOK).JSON(
+		responses.SuccessResponse{
+			Status:  fiber.StatusOK,
+			Message: "Success",
+			Data: &fiber.Map{
+				"current_page": 1,
+				"last_page":    "currently not implemented...", // math.Ceil(float64(totalObjects) / float64(limit))
+				"data":         "Got Received Invites",
+			},
+		},
+	)
+}
+
+func GetWhitelistSentRequests(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusOK).JSON(
+		responses.SuccessResponse{
+			Status:  fiber.StatusOK,
+			Message: "Success",
+			Data: &fiber.Map{
+				"current_page": 1,
+				"last_page":    "currently not implemented...", // math.Ceil(float64(totalObjects) / float64(limit))
+				"data":         "Got Sent Requests",
+			},
+		},
+	)
+}
+
+func GetWhitelistReceivedRequests(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusOK).JSON(
+		responses.SuccessResponse{
+			Status:  fiber.StatusOK,
+			Message: "Success",
+			Data: &fiber.Map{
+				"current_page": 1,
+				"last_page":    "currently not implemented...", // math.Ceil(float64(totalObjects) / float64(limit))
+				"data":         "Got Received Requests",
 			},
 		},
 	)

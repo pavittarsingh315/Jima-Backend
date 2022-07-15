@@ -37,9 +37,10 @@ func FollowAUser(c *fiber.Ctx) error {
 	}
 
 	newRelationObj := models.Relation{
-		Id:         primitive.NewObjectID(),
-		FollowerId: reqProfile.Id,
-		FollowedId: toBeFollowedProfileId,
+		Id:          primitive.NewObjectID(),
+		FollowerId:  reqProfile.Id,
+		FollowedId:  toBeFollowedProfileId,
+		CreatedDate: time.Now(),
 	}
 
 	_, err = configs.RelationCollection.InsertOne(ctx, newRelationObj)

@@ -67,9 +67,13 @@ func whitelistRouter(group fiber.Router) {
 	router.Delete("/request/decline/:requestId", middleware.UserAuthHandler, users.DeclineWhitelistEntryRequest)
 
 	router.Delete("/remove/:profileId", middleware.UserAuthHandler, users.RemoveUserFromWhitelist)
-
 	router.Delete("/leave/:profileId", middleware.UserAuthHandler, users.LeaveWhitelist)
 
 	router.Get("/get", middleware.UserAuthHandler, middleware.PaginationHandler, users.GetWhitelist)
 	router.Get("/subscriptions/get", middleware.UserAuthHandler, middleware.PaginationHandler, users.GetWhitelistSubscriptions)
+
+	router.Get("/invites/sent/get", middleware.UserAuthHandler, middleware.PaginationHandler, users.GetWhitelistSentInvites)
+	router.Get("/invites/received/get", middleware.UserAuthHandler, middleware.PaginationHandler, users.GetWhitelistReceivedInvites)
+	router.Get("/requests/sent/get", middleware.UserAuthHandler, middleware.PaginationHandler, users.GetWhitelistSentRequests)
+	router.Get("/requests/received/get", middleware.UserAuthHandler, middleware.PaginationHandler, users.GetWhitelistReceivedRequests)
 }

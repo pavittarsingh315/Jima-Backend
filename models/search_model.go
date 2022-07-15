@@ -1,6 +1,8 @@
 package models
 
 import (
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -10,7 +12,8 @@ Database Indices:
 */
 
 type Search struct {
-	Id        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	ProfileId primitive.ObjectID `json:"profileId" bson:"profileId,omitempty"`
-	Queries   []string           `json:"queries" bson:"queries,omitempty"`
+	Id          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	ProfileId   primitive.ObjectID `json:"profileId" bson:"profileId,omitempty"`
+	Queries     []string           `json:"queries" bson:"queries,omitempty"`
+	CreatedDate time.Time          `json:"createdDate,omitempty" bson:"createdDate,omitempty"`
 }
