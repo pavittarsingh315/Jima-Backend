@@ -391,29 +391,109 @@ func GetWhitelistSubscriptions(c *fiber.Ctx) error {
 	)
 }
 
+// TODO: Implement an efficient search/filtering element to the route.
 func GetWhitelistSentInvites(c *fiber.Ctx) error {
+	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
+	page := c.Locals("page").(int64)
+	limit := c.Locals("limit").(int64)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "senderId", Value: reqProfile.Id}, {Key: "type", Value: "Invite"}}}}
+	lookupStage := bson.D{{Key: "$lookup", Value: bson.D{
+		{Key: "from", Value: "profiles"},
+		{Key: "localField", Value: "receiverId"},
+		{Key: "foreignField", Value: "_id"},
+		{Key: "as", Value: "profile"},
+	}}}
+	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "createdDate", Value: -1}}}} // sort chronologically(newest to oldest)
+	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
+	limitStage := bson.D{{Key: "$limit", Value: limit}}
+	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
+	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
+
+	aggPipeline := mongo.Pipeline{matchStage, lookupStage, sortStage, skipStage, limitStage, unwindStage, projectStage}
+	cursor, err := configs.WhitelistRelationCollection.Aggregate(ctx, aggPipeline)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	}
+	defer cursor.Close(ctx)
+
+	type object struct {
+		Id      primitive.ObjectID `json:"invitationId" bson:"_id,omitempty"`
+		Profile models.MiniProfile `json:"receiverProfile" bson:"profile,omitempty"`
+	}
+	var invitesSent = []object{}
+	for cursor.Next(ctx) {
+		var invite object
+		if err := cursor.Decode(&invite); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+		}
+		invitesSent = append(invitesSent, invite)
+	}
+
 	return c.Status(fiber.StatusOK).JSON(
 		responses.SuccessResponse{
 			Status:  fiber.StatusOK,
 			Message: "Success",
 			Data: &fiber.Map{
-				"current_page": 1,
+				"current_page": page,
 				"last_page":    "currently not implemented...", // math.Ceil(float64(totalObjects) / float64(limit))
-				"data":         "Got Sent Invites",
+				"data":         invitesSent,
 			},
 		},
 	)
 }
 
+// TODO: Implement an efficient search/filtering element to the route.
 func GetWhitelistReceivedInvites(c *fiber.Ctx) error {
+	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
+	page := c.Locals("page").(int64)
+	limit := c.Locals("limit").(int64)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "receiverId", Value: reqProfile.Id}, {Key: "type", Value: "Invite"}}}}
+	lookupStage := bson.D{{Key: "$lookup", Value: bson.D{
+		{Key: "from", Value: "profiles"},
+		{Key: "localField", Value: "senderId"},
+		{Key: "foreignField", Value: "_id"},
+		{Key: "as", Value: "profile"},
+	}}}
+	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "createdDate", Value: -1}}}} // sort chronologically(newest to oldest)
+	skipStage := bson.D{{Key: "$skip", Value: (page - 1) * limit}}
+	limitStage := bson.D{{Key: "$limit", Value: limit}}
+	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
+	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
+
+	aggPipeline := mongo.Pipeline{matchStage, lookupStage, sortStage, skipStage, limitStage, unwindStage, projectStage}
+	cursor, err := configs.WhitelistRelationCollection.Aggregate(ctx, aggPipeline)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	}
+	defer cursor.Close(ctx)
+
+	type object struct {
+		Id      primitive.ObjectID `json:"invitationId" bson:"_id,omitempty"`
+		Profile models.MiniProfile `json:"senderProfile" bson:"profile,omitempty"`
+	}
+	var invitesReceived = []object{}
+	for cursor.Next(ctx) {
+		var invite object
+		if err := cursor.Decode(&invite); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+		}
+		invitesReceived = append(invitesReceived, invite)
+	}
+
 	return c.Status(fiber.StatusOK).JSON(
 		responses.SuccessResponse{
 			Status:  fiber.StatusOK,
 			Message: "Success",
 			Data: &fiber.Map{
-				"current_page": 1,
+				"current_page": page,
 				"last_page":    "currently not implemented...", // math.Ceil(float64(totalObjects) / float64(limit))
-				"data":         "Got Received Invites",
+				"data":         invitesReceived,
 			},
 		},
 	)
