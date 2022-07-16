@@ -516,28 +516,114 @@ func GetWhitelistReceivedInvites(c *fiber.Ctx) error {
 }
 
 func GetWhitelistSentRequests(c *fiber.Ctx) error {
+	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
+	page := c.Locals("page").(int64)
+	limit := c.Locals("limit").(int64)
+	skip := c.Locals("skip").(int64)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "senderId", Value: reqProfile.Id}, {Key: "type", Value: "Request"}}}}
+
+	// these 3 stages are optimized: https://stackoverflow.com/questions/24160037/skip-and-limit-in-aggregation-framework
+	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "createdDate", Value: -1}}}} // sort chronologically(newest to oldest)
+	limitStage := bson.D{{Key: "$limit", Value: skip + limit}}
+	skipStage := bson.D{{Key: "$skip", Value: skip}}
+
+	lookupStage := bson.D{{Key: "$lookup", Value: bson.D{
+		{Key: "from", Value: "profiles"},
+		{Key: "localField", Value: "receiverId"},
+		{Key: "foreignField", Value: "_id"},
+		{Key: "as", Value: "profile"},
+	}}}
+	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
+	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
+
+	aggPipeline := mongo.Pipeline{matchStage, sortStage, limitStage, skipStage, lookupStage, unwindStage, projectStage}
+	cursor, err := configs.WhitelistRelationCollection.Aggregate(ctx, aggPipeline)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	}
+	defer cursor.Close(ctx)
+
+	type object struct {
+		Id      primitive.ObjectID `json:"requestId" bson:"_id,omitempty"`
+		Profile models.MiniProfile `json:"receiverProfile" bson:"profile,omitempty"`
+	}
+	var requestsSent = []object{}
+	for cursor.Next(ctx) {
+		var invite object
+		if err := cursor.Decode(&invite); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+		}
+		requestsSent = append(requestsSent, invite)
+	}
+
 	return c.Status(fiber.StatusOK).JSON(
 		responses.SuccessResponse{
 			Status:  fiber.StatusOK,
 			Message: "Success",
 			Data: &fiber.Map{
-				"current_page": 1,
+				"current_page": page,
 				"last_page":    "currently not implemented...", // math.Ceil(float64(totalObjects) / float64(limit))
-				"data":         "Got Sent Requests",
+				"data":         requestsSent,
 			},
 		},
 	)
 }
 
 func GetWhitelistReceivedRequests(c *fiber.Ctx) error {
+	var reqProfile models.Profile = c.Locals("profile").(models.Profile)
+	page := c.Locals("page").(int64)
+	limit := c.Locals("limit").(int64)
+	skip := c.Locals("skip").(int64)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "receiverId", Value: reqProfile.Id}, {Key: "type", Value: "Request"}}}}
+
+	// these 3 stages are optimized: https://stackoverflow.com/questions/24160037/skip-and-limit-in-aggregation-framework
+	sortStage := bson.D{{Key: "$sort", Value: bson.D{{Key: "createdDate", Value: -1}}}} // sort chronologically(newest to oldest)
+	limitStage := bson.D{{Key: "$limit", Value: skip + limit}}
+	skipStage := bson.D{{Key: "$skip", Value: skip}}
+
+	lookupStage := bson.D{{Key: "$lookup", Value: bson.D{
+		{Key: "from", Value: "profiles"},
+		{Key: "localField", Value: "senderId"},
+		{Key: "foreignField", Value: "_id"},
+		{Key: "as", Value: "profile"},
+	}}}
+	unwindStage := bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$profile"}}}}
+	projectStage := bson.D{{Key: "$project", Value: bson.D{{Key: "profile._id", Value: 1}, {Key: "profile.username", Value: 1}, {Key: "profile.name", Value: 1}, {Key: "profile.miniProfilePicture", Value: 1}}}}
+
+	aggPipeline := mongo.Pipeline{matchStage, sortStage, limitStage, skipStage, lookupStage, unwindStage, projectStage}
+	cursor, err := configs.WhitelistRelationCollection.Aggregate(ctx, aggPipeline)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+	}
+	defer cursor.Close(ctx)
+
+	type object struct {
+		Id      primitive.ObjectID `json:"requestId" bson:"_id,omitempty"`
+		Profile models.MiniProfile `json:"senderProfile" bson:"profile,omitempty"`
+	}
+	var requestsReceived = []object{}
+	for cursor.Next(ctx) {
+		var invite object
+		if err := cursor.Decode(&invite); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(responses.ErrorResponse{Status: fiber.StatusInternalServerError, Message: "Error", Data: &fiber.Map{"data": "Unexpected error..."}})
+		}
+		requestsReceived = append(requestsReceived, invite)
+	}
+
 	return c.Status(fiber.StatusOK).JSON(
 		responses.SuccessResponse{
 			Status:  fiber.StatusOK,
 			Message: "Success",
 			Data: &fiber.Map{
-				"current_page": 1,
+				"current_page": page,
 				"last_page":    "currently not implemented...", // math.Ceil(float64(totalObjects) / float64(limit))
-				"data":         "Got Received Requests",
+				"data":         requestsReceived,
 			},
 		},
 	)
