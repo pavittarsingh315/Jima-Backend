@@ -35,6 +35,6 @@ type Profile struct {
 type MiniProfile struct {
 	Id                 primitive.ObjectID `json:"profileId" bson:"_id,omitempty"`
 	Username           string             `json:"username,omitempty"`
-	Name               string             `json:"name,omitempty"`
+	Name               string             `json:"name"`
 	MiniProfilePicture string             `json:"miniProfilePicture,omitempty"`
 }
